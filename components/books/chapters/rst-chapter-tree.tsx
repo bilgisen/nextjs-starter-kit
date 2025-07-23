@@ -5,8 +5,6 @@ import { Pencil, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import SortableTree, { TreeItem } from '@nosferatu500/react-sortable-tree';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const FileExplorerTheme = require('react-sortable-tree-theme-minimal').default;
 import '@nosferatu500/react-sortable-tree/style.css';
 import type { ChapterNode } from '@/types/dnd';
 
@@ -106,21 +104,6 @@ export function RstChapterTree({
         onChange={handleTreeChange}
         getNodeKey={({ node }) => node.id}
         generateNodeProps={renderNode}
-        theme={{
-          ...FileExplorerTheme,
-          row: 'py-1',
-          node: 'py-1',
-          rowContents: 'p-2 rounded-md',
-          rowContentsDragDisabled: 'p-2',
-          rowWrapper: 'p-0.5',
-          rowTitle: 'text-sm font-medium',
-          rowTitleWithSubtitle: 'text-sm',
-          rowSubtitle: 'text-xs text-muted-foreground',
-          rowTitleText: 'flex items-center',
-          collapseButton: 'p-1 rounded hover:bg-muted',
-          expandButton: 'p-1 rounded hover:bg-muted',
-          expandButtonWrapper: 'flex items-center',
-        }}
         canDrag={({ node }) => !node.dragDisabled}
         canDrop={({ nextParent }) => !nextParent?.dragDisabled}
         slideRegionSize={50}
