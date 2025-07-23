@@ -10,7 +10,6 @@ interface ChapterDropZoneProps {
   parentId?: string | null;
   position: DropPosition;
   level: number;
-  isLast?: boolean;
   disabled?: boolean;
 }
 
@@ -19,7 +18,6 @@ export function ChapterDropZone({
   parentId,
   position,
   level,
-  isLast = false,
   disabled = false,
 }: ChapterDropZoneProps) {
   const { isOver, setNodeRef } = useDroppable({

@@ -108,7 +108,7 @@ export default function ChapterDetailPage() {
   };
 
   const handleDragEnd = async (result: DropResult) => {
-    const { source, destination } = result;
+    const { destination } = result;
 
     if (!destination) return;
 

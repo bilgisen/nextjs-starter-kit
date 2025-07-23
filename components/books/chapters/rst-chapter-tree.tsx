@@ -5,8 +5,7 @@ import { Pencil, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import SortableTree, { TreeItem } from '@nosferatu500/react-sortable-tree';
-// Using require to avoid module resolution issues
-const FileExplorerTheme = require('react-sortable-tree-theme-minimal').default;
+import FileExplorerTheme from 'react-sortable-tree-theme-minimal';
 import '@nosferatu500/react-sortable-tree/style.css';
 import type { ChapterNode } from '@/types/dnd';
 
@@ -43,7 +42,7 @@ export function RstChapterTree({
     onSave(flattenTree(data));
   };
 
-  const renderNode = useCallback(({ node, path }: any) => {
+  const renderNode = useCallback(({ node }: { node: TreeNode }) => {
     return {
       title: (
         <div className="flex items-center justify-between w-full group">

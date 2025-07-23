@@ -52,7 +52,7 @@ export function moveItemToNewParentAndReorder(
     item.id === draggedId ? { ...item, parent_chapter_id: newParentId } : item,
   );
 
-  let siblings = updatedItems
+  const siblings = updatedItems
     .filter(item => item.parent_chapter_id === newParentId && item.id !== draggedId)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 

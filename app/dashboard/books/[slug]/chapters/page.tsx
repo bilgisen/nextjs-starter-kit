@@ -112,7 +112,7 @@ export default function ChaptersPage() {
         <div>
           <h1 className="text-2xl font-semibold">Chapters</h1>
           <p className="text-muted-foreground">
-            Organize and manage your book's chapters
+            Organize and manage your book&apos;s chapters
           </p>
         </div>
         <Button onClick={handleAddChapter} disabled={isSaving}>

@@ -19,9 +19,8 @@ export function ChaptersArrange({
   onEdit, 
   onView, 
   onDelete, 
-  onAddChapter,
   className = '' 
-}: ChaptersArrangeProps) {
+}: Omit<ChaptersArrangeProps, 'onAddChapter'>) {
   console.log('ChaptersArrange - Received chapters:', chapters);
   return (
     <div className={className}>
