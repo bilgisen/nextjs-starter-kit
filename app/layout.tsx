@@ -1,8 +1,12 @@
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
-import { ThemeProvider } from "../components/provider";
+import { ThemeProvider } from "@/components/provider";
+import { Providers } from "@/app/providers";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
+import '@/styles/rst-tailwind-theme.css';
+
+
 export const metadata: Metadata = {
   title: "Next.js Starter Kit - Launch Your SAAS",
   description:
@@ -33,17 +37,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-[-apple-system,BlinkMacSystemFont]antialiased`}>
+      <body className={`font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          enableSystem
-          forcedTheme="light"
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
-          {children}
-          <Toaster />
-          <Analytics />
+          <Providers>
+            {children}
+            <Toaster />
+            <Analytics />
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

@@ -1,0 +1,153 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+import { chapterFormSchema } from "@/schemas/chapter-schema";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { ParentChapterSelect } from "./ParentChapterSelect";
+
+type ChapterFormValues = z.infer<typeof chapterFormSchema>;
+
+type Chapter = {
+  id: string;
+  title: string;
+};
+
+type Props = {
+  initialData?: ChapterFormValues;
+  parentChapters: Chapter[];
+  onSubmit: (values: ChapterFormValues) => void;
+  disabled?: boolean;
+};
+
+export const ChapterContentForm = ({
+  initialData,
+  parentChapters,
+  onSubmit,
+  disabled,
+}: Props) => {
+  const form = useForm<ChapterFormValues>({
+    resolver: zodResolver(chapterFormSchema),
+    defaultValues: {
+      title: initialData?.title || "",
+      content: initialData?.content || "",
+      order: initialData?.order || 0,
+      level: initialData?.level || 0,
+      parent_chapter_id: initialData?.parent_chapter_id ?? null,
+    },
+  });
+
+  const { register, handleSubmit, formState, watch, setValue } = form;
+  const { errors, isSubmitting } = formState;
+
+  const watchedParentId = watch("parent_chapter_id");
+  const [selectValue, setSelectValue] = useState<string | null>(watchedParentId ?? null);
+
+  // Keep local state in sync with form
+  useEffect(() => {
+    setSelectValue(watchedParentId ?? null);
+  }, [watchedParentId]);
+
+  const handleParentChange = (value: string | null) => {
+    setSelectValue(value);
+    setValue("parent_chapter_id", value, { shouldValidate: true });
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input disabled={disabled} placeholder="Chapter title" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormItem>
+          <FormLabel>Parent Chapter</FormLabel>
+          <FormControl>
+            <ParentChapterSelect
+              parentChapters={parentChapters}
+              value={selectValue}
+              onChange={handleParentChange}
+              disabled={disabled}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+
+        <FormField
+          control={form.control}
+          name="order"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Order</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  disabled={disabled}
+                  placeholder="Order"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="level"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Level</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  disabled={disabled}
+                  placeholder="Level"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="content"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Content</FormLabel>
+              <FormControl>
+                <Input
+                  disabled={disabled}
+                  placeholder="Chapter content"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={disabled || isSubmitting}>
+          Save Chapter
+        </Button>
+      </form>
+    </Form>
+  );
+};

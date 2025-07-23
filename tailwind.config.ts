@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config = {
-  darkMode: ["class", ".dark"],
+  darkMode: "class", // sadece "class" olmalı, array değil
   content: [
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -53,7 +53,6 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Chart colors
         chart: {
           1: "hsl(var(--chart-1))",
           2: "hsl(var(--chart-2))",

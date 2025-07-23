@@ -26,6 +26,11 @@ const navItems: NavItem[] = [
     icon: HomeIcon,
   },
   {
+    label: "Books",
+    href: "/dashboard/books",
+    icon: HomeIcon,
+  },
+  {
     label: "Chat",
     href: "/dashboard/chat",
     icon: MessageCircleIcon,

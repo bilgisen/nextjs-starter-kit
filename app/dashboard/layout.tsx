@@ -1,20 +1,55 @@
-import { ReactNode } from "react";
-import DashboardTopNav from "./_components/navbar";
-import DashboardSideBar from "./_components/sidebar";
-import Chatbot from "./_components/chatbot";
+'use client';
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+import { ReactNode, useEffect, useState } from 'react';
+import { NextIntlClientProvider } from 'next-intl';
+import { ThemeProvider } from 'next-themes';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import enMessages from '@/messages/en.json';
+import trMessages from '@/messages/tr.json';
+import { Toaster } from '@/components/ui/sonner';
+import DashboardTopNav from './_components/navbar';
+
+const messagesMap = {
+  en: enMessages,
+  tr: trMessages
+};
+
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const [locale, setLocale] = useState<'en' | 'tr'>('en');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const stored = localStorage.getItem('adminLocale');
+    if (stored === 'tr' || stored === 'en') {
+      setLocale(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem('adminLocale', locale);
+    }
+  }, [locale, mounted]);
+
+  const messages = messagesMap[locale];
+
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <div className="flex h-screen overflow-hidden w-full">
-      <DashboardSideBar />
-      <main className="flex-1 overflow-y-auto">
-        <DashboardTopNav>{children}</DashboardTopNav>
-      </main>
-      <Chatbot />
-    </div>
+    <NextIntlClientProvider key={locale} locale={locale} messages={messages}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <TooltipProvider>
+          <div className="flex min-h-screen flex-col">
+            <DashboardTopNav locale={locale} setLocale={setLocale}>
+              {children}
+            </DashboardTopNav>
+            <Toaster position="top-right" />
+          </div>
+        </TooltipProvider>
+      </ThemeProvider>
+    </NextIntlClientProvider>
   );
 }

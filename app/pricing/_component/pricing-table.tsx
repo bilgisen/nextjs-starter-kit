@@ -190,14 +190,7 @@ export default function PricingTable({
         </Card>
       </div>
 
-      <div className="mt-12 text-center">
-        <p className="text-muted-foreground">
-          Need a custom plan?{" "}
-          <span className="text-primary cursor-pointer hover:underline">
-            Contact us
-          </span>
-        </p>
-      </div>
+
     </section>
   );
 }

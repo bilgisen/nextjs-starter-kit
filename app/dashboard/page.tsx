@@ -1,12 +1,20 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { SectionCards } from "./_components/section-cards";
-import { ChartAreaInteractive } from "./_components/chart-interactive";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { MoreVertical, BookOpen, Plus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 export default async function Dashboard() {
   const result = await auth.api.getSession({
-    headers: await headers(), // you need to pass the headers object.
+    headers: await headers(),
   });
 
   if (!result?.session?.userId) {
@@ -14,23 +22,46 @@ export default async function Dashboard() {
   }
 
   return (
-    <section className="flex flex-col items-start justify-start p-6 w-full">
-      <div className="w-full">
-        <div className="flex flex-col items-start justify-center gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Interactive Chart
-          </h1>
-          <p className="text-muted-foreground">
-            Interactive chart with data visualization and interactive elements.
-          </p>
-        </div>
-        <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <SectionCards />
-            <ChartAreaInteractive />
+    <div className="flex-1 p-4 md:p-8">
+      <div className="space-y-4">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Welcome to your dashboard
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your content and settings from here.
+            </p>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/books" className="flex items-center w-full">
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  <span>Books</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/books/new" className="flex items-center w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span>New Book</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <Separator />
+        {/* Add your dashboard content here */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Dashboard cards will go here */}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

@@ -1,77 +1,66 @@
+"use client";
+
 import {
-  Shadcnui,
-  TailwindCSS,
-  BetterAuth,
-  Polar,
-  NeonPostgres,
-  Nextjs,
-} from "@/components/logos";
+  LayoutDashboard,
+  Globe,
+  Edit,
+  FileText,
+  CloudUpload,
+  Sparkles,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import * as React from "react";
 
-export default function Integrations() {
+export default function FeaturesSection() {
   return (
     <section>
       <div className="pt-12 pb-32">
         <div className="mx-auto max-w-5xl px-6">
           <div>
-            <h2 className="text-balance text-3xl font-semibold md:text-4xl">
-              Built with the best tools
+            <h2 className="text-balance text-3xl font-semibold md:text-3xl text-center">
+              Empowering Features for Publishers
             </h2>
-            <p className="text-muted-foreground mt-3 text-lg">
-              Launch your project with confidence, knowing that you&apos;re
-              using the best tools available.
+            <p className="text-muted-foreground mt-3 text-lg text-center">
+              Launch your digital book projects with confidence, knowing you&apos;re leveraging advanced tools designed to streamline every step of your publishing journey.
             </p>
           </div>
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <IntegrationCard
-              title="Next.js"
-              description="The React framework for production with App Router, Server Components, and built-in optimizations."
-              link="https://nextjs.org"
-            >
-              <Nextjs />
-            </IntegrationCard>
+            <FeatureCard
+              icon={<LayoutDashboard className="text-primary size-12 opacity-80 group-hover:opacity-100" strokeWidth={0.5} />}
+              title="Intuitive Dashboard"
+              description="Effortlessly create and manage your book content with a modern, user-friendly interface."
+            />
 
-            <IntegrationCard
-              title="Better Auth"
-              description="Modern authentication library with session management, OAuth providers, and security features."
-              link="https://better-auth.com"
-            >
-              <BetterAuth />
-            </IntegrationCard>
+            <FeatureCard
+              icon={<Globe className="text-primary size-12 opacity-80 group-hover:opacity-100" strokeWidth={0.5} />}
+              title="Global Reach"
+              description="Publish your books in any language and navigate a truly multilingual management panel."
+            />
 
-            <IntegrationCard
-              title="Neon Postgres"
-              description="Serverless PostgreSQL database with branching, autoscaling, and modern developer experience."
-              link="https://neon.tech"
-            >
-              <NeonPostgres />
-            </IntegrationCard>
+            <FeatureCard
+              icon={<Edit className="text-primary size-12 opacity-80 group-hover:opacity-100" strokeWidth={0.5} />}
+              title="Advanced Editor"
+              description="Craft your content with a powerful toolbar, adding footnotes, images, and rich formatting with ease."
+            />
 
-            <IntegrationCard
-              title="Polar.sh"
-              description="Developer-first subscription platform with webhooks, customer portal, and usage-based billing."
-              link="https://polar.sh"
-            >
-              <Polar />
-            </IntegrationCard>
+            <FeatureCard
+              icon={<FileText className="text-primary size-12 opacity-80 group-hover:opacity-100" strokeWidth={0.5} />}
+              title="Versatile Formats"
+              description="Generate your books in multiple popular formats like EPUB, MOBI, PDF, and HTML. Audiobooks coming soon!"
+            />
 
-            <IntegrationCard
-              title="Tailwind CSS"
-              description="Utility-first CSS framework for rapid UI development with consistent design tokens."
-              link="https://tailwindcss.com"
-            >
-              <TailwindCSS />
-            </IntegrationCard>
+            <FeatureCard
+              icon={<CloudUpload className="text-primary size-12 opacity-80 group-hover:opacity-100" strokeWidth={0.5} />}
+              title="Universal Compatibility"
+              description="Produce universally compliant outputs for major platforms including Amazon, Kobo, Apple, Google, and more."
+            />
 
-            <IntegrationCard
-              title="shadcn/ui"
-              description="Beautiful, accessible components built with Radix UI primitives and styled with Tailwind CSS."
-              link="https://ui.shadcn.com"
-            >
-              <Shadcnui />
-            </IntegrationCard>
+            <FeatureCard
+              icon={<Sparkles className="text-primary size-12 opacity-80 group-hover:opacity-100" strokeWidth={0.5} />}
+              title="AI-Powered Assistant"
+              description="Leverage the most advanced ChatGPT models, fine-tuned specifically for publishers' needs."
+            />
           </div>
         </div>
       </div>
@@ -79,46 +68,24 @@ export default function Integrations() {
   );
 }
 
-const IntegrationCard = ({
+function FeatureCard({
+  icon,
   title,
   description,
-  children,
-  link,
 }: {
+  icon: React.ReactNode;
   title: string;
   description: string;
-  children: React.ReactNode;
-  link?: string;
-}) => {
-  const CardContent = () => (
-    <div className="relative">
-      <div className="*:size-10">{children}</div>
-
-      <div className="mt-6 space-y-1.5">
-        <h3 className="text-lg font-semibold">{title}</h3>
-        <p className="text-muted-foreground line-clamp-2">{description}</p>
-      </div>
-    </div>
-  );
-
-  if (link) {
-    return (
-      <a
-        href={link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block transition-transform hover:scale-105"
-      >
-        <Card className="p-6 h-full cursor-pointer hover:shadow-lg transition-shadow rounded-md">
-          <CardContent />
-        </Card>
-      </a>
-    );
-  }
-
+}) {
   return (
-    <Card className="p-6">
-      <CardContent />
+    <Card className="p-6 h-full transition-shadow hover:shadow-lg rounded-md group">
+      <div className="flex flex-col items-start gap-4">
+        {icon}
+        <div className="space-y-1.5">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <p className="text-muted-foreground">{description}</p>
+        </div>
+      </div>
     </Card>
   );
-};
+}

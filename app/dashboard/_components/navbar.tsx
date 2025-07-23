@@ -1,82 +1,59 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
-import {
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { ModeToggle } from "@/components/mode-toggle";
 import UserProfile from "@/components/user-profile";
-import {
-  Brush,
-  HomeIcon,
-  LucideGitBranchPlus,
-  MonitorSmartphone,
-} from "lucide-react";
 import Link from "next/link";
 import { ReactNode } from "react";
 
-export default function DashboardTopNav({ children }: { children: ReactNode }) {
+type Props = {
+  children: ReactNode;
+  locale: "en" | "tr";
+  setLocale: (locale: "en" | "tr") => void;
+};
+
+export default function DashboardTopNav({ children, locale, setLocale }: Props) {
+
+
   return (
-    <div className="flex flex-col">
-      <header className="flex h-14 lg:h-[52px] items-center gap-4 border-b px-3">
-        <Dialog>
-          <SheetTrigger className="min-[1024px]:hidden p-2 transition">
-            <Link prefetch={true} href="/dashboard">
-              <span className="sr-only">Home</span>
+    <div className="flex flex-col min-h-screen">
+      <header className="w-full border-b bg-background">
+        <div className="container flex h-16 items-center px-8 justify-between">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <span className="font-bold text-lg">Pixpubli</span>
             </Link>
-          </SheetTrigger>
-          <SheetContent side="left">
-            <SheetHeader>
-              <Link prefetch={true} href="/">
-                <SheetTitle>Pass Builder</SheetTitle>
-              </Link>
-            </SheetHeader>
-            <div className="flex flex-col space-y-3 mt-[1rem]">
-              <DialogClose asChild>
-                <Link prefetch={true} href="/dashboard">
-                  <Button variant="outline" className="w-full">
-                    <HomeIcon className="mr-2 h-4 w-4" />
-                    Overview
-                  </Button>
-                </Link>
-              </DialogClose>
-              <DialogClose asChild>
-                <Link prefetch={true} href="/dashboard/create">
-                  <Button variant="outline" className="w-full">
-                    <Brush className="mr-2 h-4 w-4" />
-                    Create Pass
-                  </Button>
-                </Link>
-              </DialogClose>
-              <DialogClose asChild>
-                <Link prefetch={true} href="/dashboard/notifications">
-                  <Button variant="outline" className="w-full">
-                    <MonitorSmartphone className="mr-2 h-4 w-4" />
-                    Notifications
-                  </Button>
-                </Link>
-              </DialogClose>
-              <Separator className="my-3" />
-              <DialogClose asChild>
-                <Link prefetch={true} href="/dashboard/analytics">
-                  <Button variant="outline" className="w-full">
-                    <LucideGitBranchPlus className="mr-2 h-4 w-4" />
-                    Analytics
-                  </Button>
-                </Link>
-              </DialogClose>
-            </div>
-          </SheetContent>
-        </Dialog>
-        <div className="flex justify-center items-center gap-2 ml-auto">
-          <UserProfile mini={true} />
+          </div>
+
+          {/* User Controls */}
+          <div className="flex items-center space-x-4">
+            {/* Language Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocale(locale === "en" ? "tr" : "en")}
+              className="font-medium"
+            >
+              {locale === "en" ? "TR" : "EN"}
+            </Button>
+            
+            <UserProfile mini={true} />
+
+            <ModeToggle />
+          </div>
         </div>
       </header>
-      {children}
+      <main className="flex-1">
+        {children}
+      </main>
+      
+      <footer className="border-t py-6">
+        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
+          <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+            © {new Date().getFullYear()} Pixpubli. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

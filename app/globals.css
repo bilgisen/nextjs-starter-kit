@@ -1,127 +1,214 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --font-sans: var(--font-apple-system);
-    --font-mono: var(--font-sf-mono);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --radius-sm: 8px;
-    --radius-md: 10px;
-    --radius-lg: 12px;
-    --radius-xl: 20px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-apple-system);
+  --font-mono: var(--font-sf-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
 }
 
 :root {
-    /* Apple Light Theme Colors */
-    --background: #ffffff;
-    --foreground: #000000;
-    --card: #ffffff;
-    --card-foreground: #000000;
-    --popover: #ffffff;
-    --popover-foreground: #000000;
-    --primary: #0071e3; /* Apple Blue */
-    --primary-foreground: #ffffff;
-    --secondary: #f5f5f7; /* Apple Light Gray */
-    --secondary-foreground: #1d1d1f;
-    --muted: #f5f5f7;
-    --muted-foreground: #86868b;
-    --accent: #0071e3; /* Apple Blue */
-    --accent-foreground: #ffffff;
-    --destructive: #ff3b30; /* Apple Red */
-    --destructive-foreground: #ffffff;
-    --border: #e2e2e7; /* Lighter, more subtle border */
-    --input: #f5f5f7;
-    --ring: #0071e3;
-    --chart-1: #0071e3; /* Apple Blue */
-    --chart-2: #34c759; /* Apple Green */
-    --chart-3: #ff9500; /* Apple Orange */
-    --chart-4: #ffcc00; /* Apple Yellow */
-    --chart-5: #af52de; /* Apple Purple */
-    --sidebar: #f5f5f7;
-    --sidebar-foreground: #1d1d1f;
-    --sidebar-primary: #0071e3;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #e8e8ed;
-    --sidebar-accent-foreground: #1d1d1f;
-    --sidebar-border: #e2e2e7; /* Lighter border */
-    --sidebar-ring: #0071e3;
-    /* Apple Fonts */
-    --font-apple-system:
-        -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue",
-        Helvetica, sans-serif;
-    --font-sf-mono: "SF Mono", Menlo, monospace;
-    --font-sans: var(--font-apple-system);
-    --font-serif: "New York", Georgia, serif;
-    --font-mono: var(--font-sf-mono);
-    /* Apple uses more rounded corners */
-    --radius: 10px;
-    /* Apple-style shadows */
-    --shadow-2xs: 0px 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-xs: 0px 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-sm: 0px 2px 4px rgba(0, 0, 0, 0.1);
-    --shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0px 4px 8px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0px 8px 16px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0px 12px 24px rgba(0, 0, 0, 0.1);
-    --shadow-2xl: 0px 16px 32px rgba(0, 0, 0, 0.1);
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.141 0.004 285.824);
+        --card: oklch(1 0 0);
+        --card-foreground: oklch(0.141 0.004 285.824);
+        --popover: oklch(1 0 0);
+        --popover-foreground: oklch(0.141 0.004 285.824);
+        --primary: oklch(0.604 0.182 136.828);
+        --primary-foreground: oklch(1 0 0);
+        --secondary: oklch(0.968 0.001 286.375);
+        --secondary-foreground: oklch(0.21 0.006 285.884);
+        --muted: oklch(0.968 0.001 286.375);
+        --muted-foreground: oklch(0.552 0.014 285.942);
+        --accent: oklch(0.968 0.001 286.375);
+        --accent-foreground: oklch(0.21 0.006 285.884);
+        --destructive: oklch(0.603 0.243 29.831);
+        --destructive-foreground: oklch(1 0 0);
+        --border: oklch(0.92 0.004 286.32);
+        --input: oklch(0.92 0.004 286.32);
+        --ring: oklch(0.604 0.182 136.828);
+        --chart-1: oklch(0.604 0.182 136.828);
+        --chart-2: oklch(0.601 0.293 316.449);
+        --chart-3: oklch(0.604 0.242 16.439);
+        --chart-4: oklch(0.606 0.116 226.097);
+        --chart-5: oklch(0.603 0.167 46.906);
+        --sidebar-background: oklch(0.985 0 0);
+        --sidebar-foreground: oklch(0.37 0.012 285.801);
+        --sidebar-primary: oklch(0.21 0.006 285.884);
+        --sidebar-primary-foreground: oklch(0.985 0 0);
+        --sidebar-accent: oklch(0.968 0.001 286.375);
+        --sidebar-accent-foreground: oklch(0.21 0.006 285.884);
+        --sidebar-border: oklch(0.928 0.006 264.531);
+        --sidebar-ring: oklch(0.623 0.188 259.796);
+        --radius: 0.5rem;
+    }
+    
+    .dark {
+        --background: oklch(0.141 0.004 285.824);
+        --foreground: oklch(0.985 0 0);
+        --card: oklch(0.141 0.004 285.824);
+        --card-foreground: oklch(0.985 0 0);
+        --popover: oklch(0.141 0.004 285.824);
+        --popover-foreground: oklch(0.985 0 0);
+        --primary: oklch(0.569 0.172 136.726);
+        --primary-foreground: oklch(0.985 0 0);
+        --secondary: oklch(0.274 0.005 286.033);
+        --secondary-foreground: oklch(0.985 0 0);
+        --muted: oklch(0.274 0.005 286.033);
+        --muted-foreground: oklch(0.712 0.013 286.068);
+        --accent: oklch(0.274 0.005 286.033);
+        --accent-foreground: oklch(0.985 0 0);
+        --destructive: oklch(0.569 0.228 8.795);
+        --destructive-foreground: oklch(0.985 0 0);
+        --border: oklch(0.274 0.005 286.033);
+        --input: oklch(0.274 0.005 286.033);
+        --ring: oklch(0.569 0.172 136.726);
+        --chart-1: oklch(0.569 0.172 136.726);
+        --chart-2: oklch(0.566 0.277 316.505);
+        --chart-3: oklch(0.569 0.228 16.227);
+        --chart-4: oklch(0.572 0.109 225.912);
+        --chart-5: oklch(0.565 0.16 45.718);
+        --sidebar-background: oklch(0.21 0.006 285.884);
+        --sidebar-foreground: oklch(0.968 0.001 286.375);
+        --sidebar-primary: oklch(0.488 0.217 264.388);
+        --sidebar-primary-foreground: oklch(1 0 0);
+        --sidebar-accent: oklch(0.274 0.005 286.033);
+        --sidebar-accent-foreground: oklch(0.968 0.001 286.375);
+        --sidebar-border: oklch(0.274 0.005 286.033);
+        --sidebar-ring: oklch(0.623 0.188 259.796);
+    }
+  
+
+/* Tiptap Editor Styles */
+.tiptap {
+  @apply min-h-full outline-none;
+}
+
+.tiptap p {
+  @apply my-3 first:mt-0 last:mb-0;
+}
+
+.tiptap h1,
+.tiptap h2,
+.tiptap h3,
+.tiptap h4,
+.tiptap h5,
+.tiptap h6 {
+  @apply font-bold mt-4 mb-2 first:mt-0;
+}
+
+.tiptap h1 { @apply text-3xl; }
+.tiptap h2 { @apply text-2xl; }
+.tiptap h3 { @apply text-xl; }
+.tiptap h4 { @apply text-lg; }
+.tiptap h5 { @apply text-base; }
+.tiptap h6 { @apply text-sm; }
+
+.tiptap ul,
+.tiptap ol {
+  @apply my-2 pl-6;
+}
+
+.tiptap ul {
+  @apply list-disc;
+}
+
+.tiptap ol {
+  @apply list-decimal;
+}
+
+.tiptap blockquote {
+  @apply border-l-4 border-gray-200 pl-4 my-4 italic;
+}
+
+.tiptap pre {
+  @apply bg-gray-100 dark:bg-gray-800 p-4 rounded-md my-4 overflow-x-auto;
+}
+
+.tiptap code {
+  @apply bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.tiptap pre code {
+  @apply bg-transparent p-0;
 }
 
 @layer base {
-    * {
-        @apply border-border outline-ring/50;
-    }
-    body {
-        @apply bg-background text-foreground font-sans;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
-    button,
-    input,
-    select,
-    textarea {
-        @apply focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200;
-    }
-    button {
-        @apply hover:cursor-pointer;
-    }
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-        @apply font-medium tracking-tight;
-    }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200;
+  }
+  button {
+    @apply hover:cursor-pointer;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-medium tracking-tight;
+  }
+
+  /* Text selection styles for TipTap editor */
+  .ProseMirror ::selection,
+  .simple-editor-content ::selection {
+    background-color: color-mix(in oklab, var(--primary) 50%, transparent);
+    color: var(--primary-foreground);
+  }
+
+  .dark .ProseMirror ::selection,
+  .dark .simple-editor-content ::selection {
+    background-color: color-mix(in oklab, var(--primary) 40%, transparent);
+    color: var(--primary-foreground);
+  }
 }
+
+
