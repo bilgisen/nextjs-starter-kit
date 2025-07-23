@@ -5,7 +5,8 @@ import { Pencil, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import SortableTree, { TreeItem } from '@nosferatu500/react-sortable-tree';
-import FileExplorerTheme from 'react-sortable-tree-theme-minimal';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const FileExplorerTheme = require('react-sortable-tree-theme-minimal').default;
 import '@nosferatu500/react-sortable-tree/style.css';
 import type { ChapterNode } from '@/types/dnd';
 
@@ -42,58 +43,61 @@ export function RstChapterTree({
     onSave(flattenTree(data));
   };
 
-  const renderNode = useCallback(({ node }: { node: TreeNode }) => {
-    return {
-      title: (
-        <div className="flex items-center justify-between w-full group">
-          <span className="text-gray-800 dark:text-gray-100 font-medium">
-            {node.title}
-          </span>
-          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {onView && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onView(node.id);
-                }}
-              >
-                <Eye className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            {onEdit && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(node.id);
-                }}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            {onDelete && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 text-destructive hover:text-destructive/90"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(node.id);
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
+  const renderNode = useCallback(
+    ({ node }: { node: TreeNode }) => {
+      return {
+        title: (
+          <div className="flex items-center justify-between w-full group">
+            <span className="text-gray-800 dark:text-gray-100 font-medium">
+              {node.title}
+            </span>
+            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {onView && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView(node.id);
+                  }}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {onEdit && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(node.id);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {onDelete && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 text-destructive hover:text-destructive/90"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(node.id);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      ),
-    };
-  }, [onEdit, onView, onDelete]);
+        ),
+      };
+    },
+    [onEdit, onView, onDelete]
+  );  
 
   return (
     <div className={cn("react-sortable-tree h-[600px] overflow-auto", className)}>
