@@ -1,30 +1,33 @@
 'use server';
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { pollEpubBuildStatus } from '@/lib/publish/epub/submitEpubBuildRequest';
-import type { EpubBuildStatus } from '@/types/epub';
+import { getSession } from '@/actions/auth/get-session';
+import { GenerationStatus } from './types';
+import { getAuthHeaders, getApiUrl, handleApiResponse } from './utils';
 
-/**
- * Gets the current status of an EPUB generation
- */
-export default async function getEpubGenerationStatus(bookSlug: string, requestId: string): Promise<EpubBuildStatus> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+export async function getEpubGenerationStatus(
+  bookSlug: string,
+  runId: string
+): Promise<GenerationStatus> {
+  const session = await getSession();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
   }
 
+  const url = getApiUrl(`/api/books/${bookSlug}/publish/status?run_id=${runId}`);
+  
   try {
-    // Get the current build status
-    const status = await pollEpubBuildStatus(requestId);
-    
-    if (!status) {
-      throw new Error('Build status not found');
-    }
+    const response = await fetch(url, {
+      headers: await getAuthHeaders(),
+      next: { revalidate: 10 } // Revalidate every 10 seconds
+    });
 
-    return status;
+    return handleApiResponse<GenerationStatus>(response);
   } catch (error) {
-    console.error('Error fetching build status:', error);
-    throw new Error('Failed to get EPUB generation status');
+    console.error('Failed to fetch EPUB generation status:', error);
+    throw new Error(
+      error instanceof Error 
+        ? error.message 
+        : 'Failed to fetch EPUB generation status'
+    );
   }
 }

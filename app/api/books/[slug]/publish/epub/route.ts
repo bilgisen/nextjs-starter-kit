@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-// withApiAuth import removed as it's not being used
-import { getChaptersByBook } from '@/actions/books/get-chapters-by-book';
+import { getSession } from '@/actions/auth/get-session';
 import { getBookBySlug } from '@/actions/books/get-book-by-slug';
-import { buildBasePayload } from '@/lib/publish/buildPayload';
+import { generateEpub } from '@/actions/books/publish/epub-actions/generateEpub';
+import { headers } from 'next/headers';
+import { getServerSession } from 'next-auth/next';
+
+// Helper to get the base URL
+function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+  const host = headers().get('host');
+  return `${protocol}://${host}`;
+}
 
 const epubGenerationSchema = z.object({
   options: z.object({
@@ -16,18 +28,103 @@ const epubGenerationSchema = z.object({
   }),
 });
 
+type WorkflowDispatchResponse = {
+  id: string;
+  workflow_id: number;
+  node_id: string;
+  url: string;
+  html_url: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+async function triggerGitHubWorkflow(
+  bookSlug: string,
+  options: z.infer<typeof epubGenerationSchema>['options']
+): Promise<WorkflowDispatchResponse> {
+  const GITHUB_TOKEN = process.env.GITHUB_PAT;
+  const REPO = process.env.GITHUB_REPO;
+  const WORKFLOW = process.env.GITHUB_WORKFLOW || 'build-epub.yaml';
+  const baseUrl = getBaseUrl();
+  const payloadUrl = `${baseUrl}/api/books/${bookSlug}/publish/epub/payload`;
+
+  if (!GITHUB_TOKEN || !REPO) {
+    throw new Error('GitHub integration is not properly configured');
+  }
+
+  // Trigger the workflow
+  const response = await fetch(
+    `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ref: 'main', // or your default branch
+        inputs: {
+          book_slug: bookSlug,
+          payload_url: payloadUrl,
+          token: process.env.NEXT_EPUB_SECRET,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`GitHub API error: ${response.status} - ${error}`);
+  }
+
+  // Get the workflow run details
+  const workflowRuns = await fetch(
+    `https://api.github.com/repos/${REPO}/actions/runs?event=workflow_dispatch&status=queued&per_page=1`,
+    {
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    }
+  ).then(res => res.json());
+
+  if (!workflowRuns.workflow_runs?.length) {
+    throw new Error('Failed to retrieve workflow run details');
+  }
+
+  return workflowRuns.workflow_runs[0];
+}
+
 async function handleEpubGeneration(
   request: Request,
   { params }: { params: { slug: string } }
 ) {
   try {
-    const { slug } = params;
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
+    const { slug } = params;
     const book = await getBookBySlug(slug);
+    
     if (!book) {
       return NextResponse.json(
         { success: false, error: 'Book not found' },
         { status: 404 }
+      );
+    }
+
+    // Verify the book belongs to the current user
+    if (book.userId !== session.user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
       );
     }
 
@@ -56,50 +153,54 @@ async function handleEpubGeneration(
     const { options } = validation.data;
 
     try {
-      // Fetch chapters to ensure they exist, but we don't need the result here
-      // as buildBasePayload will fetch them again with the correct structure
-      await getChaptersByBook(book.id);
-      const basePayload = await buildBasePayload(slug);
-
-      const payload = {
-        ...basePayload,
-        options: {
-          ...options,
-          output_format: 'epub',
-          cover: options.cover && !!(book.cover_image_url || book.coverImageUrl),
-        },
-      };
-
-      if (!options.generate_toc && 'toc_depth' in payload.options) {
-        delete payload.options.toc_depth;
+      // Generate the EPUB using our action
+      const result = await generateEpub(slug, options);
+      
+      // If we're in development or testing, return the result directly
+      if (process.env.NODE_ENV !== 'production') {
+        return NextResponse.json({
+          success: true,
+          message: 'EPUB generated successfully',
+          data: result,
+        });
       }
 
+      // In production, trigger GitHub Actions workflow
+      const workflow = await triggerGitHubWorkflow(slug, options);
+      
       return NextResponse.json({
         success: true,
-        data: payload,
-        timestamp: new Date().toISOString(),
+        message: 'EPUB generation started',
+        workflow_dispatch: {
+          id: workflow.id,
+          workflow: `build-epub.yaml`,
+          status: workflow.status,
+          created_at: workflow.created_at,
+          html_url: workflow.html_url,
+          check_run_url: `${workflow.html_url}/check`,
+        },
       });
-    } catch {
-      console.error('Error generating payload:', error);
+    } catch (error) {
+      console.error('Error in EPUB generation:', error);
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+        error instanceof Error ? error.message : 'An unknown error occurred';
       return NextResponse.json(
         {
           success: false,
-          error: 'Failed to generate payload',
+          error: 'Failed to generate EPUB',
           message: errorMessage,
         },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Error in EPUB generation:', error);
+    console.error('Error in handleEpubGeneration:', error);
     const errorMessage =
       error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to generate EPUB',
+        error: 'Internal server error',
         message: errorMessage,
       },
       { status: 500 }

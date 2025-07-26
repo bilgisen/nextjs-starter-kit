@@ -1,22 +1,50 @@
 'use server';
 
-/**
- * Handles the download of a generated EPUB file
- * Returns the download URL and filename for client-side handling
- */
-export default async function downloadEpub(downloadUrl: string, filename: string) {
+import { getSession } from '@/actions/auth/get-session';
+import { DownloadResult } from './types';
+import { getAuthHeaders, getApiUrl, handleApiResponse } from './utils';
+
+export async function downloadEpub(
+  bookSlug: string,
+  artifactId: number
+): Promise<DownloadResult> {
+  const session = await getSession();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+
+  const url = getApiUrl(`/api/books/${bookSlug}/publish/download?artifact_id=${artifactId}`);
+  
   try {
-    // For client-side download, we'll return the URL and let the client handle it
-    
-    // If the URL is a data URL, we can return it directly
-    if (downloadUrl.startsWith('data:')) {
-      return { downloadUrl, filename };
+    const response = await fetch(url, {
+      headers: await getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Failed to download EPUB');
     }
-    
-    // For server-side download, we would need to implement file handling
-    throw new Error('Server-side download not implemented');
+
+    // Get the filename from the Content-Disposition header
+    const contentDisposition = response.headers.get('content-disposition');
+    const filename = contentDisposition
+      ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+      : `book-${bookSlug}.epub`;
+
+    // Create a blob from the response
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    return {
+      success: true,
+      downloadUrl: blobUrl,
+      filename
+    };
   } catch (error) {
-    console.error('Download error:', error);
-    throw new Error('Failed to download EPUB');
+    console.error('EPUB download failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to download EPUB'
+    };
   }
 }

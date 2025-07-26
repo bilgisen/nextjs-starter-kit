@@ -1,49 +1,44 @@
 'use server';
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { submitEpubBuildRequest } from '@/lib/publish/epub/submitEpubBuildRequest';
-import type { EpubGenerationRequest } from '@/types/epub';
+import { revalidatePath } from 'next/cache';
+import { getSession } from '@/actions/auth/get-session';
+import { PublishOptions, GenerationResponse } from './types';
+import { getAuthHeaders, getApiUrl, handleApiResponse } from './utils';
 
-/**
- * Submits a request to generate an EPUB file
- */
-export default async function generateEpub(
+export async function generateEpub(
   bookSlug: string,
-  options: Partial<EpubGenerationRequest['options']> = {}
-) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+  options: Omit<PublishOptions, 'output_format'>
+): Promise<GenerationResponse> {
+  const session = await getSession();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
   }
 
-  // Get book data with default options
-  const { default: prepareEpubGeneration } = await import('./prepareEpubGeneration');
-  const { bookId, bookSlug: slug, chapters, metadata, defaultOptions } = await prepareEpubGeneration(bookSlug);
-
-  // Merge default options with provided options
-  const mergedOptions = {
-    ...defaultOptions,
+  const url = getApiUrl(`/api/books/${bookSlug}/publish/epub`);
+  const payload = {
     ...options,
+    output_format: 'epub' as const,
   };
 
   try {
-    // Submit the build request
-    const requestId = await submitEpubBuildRequest({
-      bookId,
-      bookSlug: slug,
-      chapters,
-      metadata,
-      options: mergedOptions,
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify(payload),
     });
 
-    return { 
-      success: true, 
-      requestId,
-      message: 'EPUB generation started successfully' 
-    };
+    const result = await handleApiResponse<GenerationResponse>(response);
+    
+    // Revalidate any relevant paths
+    revalidatePath(`/dashboard/books/${bookSlug}/publish`);
+    
+    return result;
   } catch (error) {
-    console.error('Error generating EPUB:', error);
-    throw new Error('Failed to start EPUB generation');
+    console.error('EPUB generation failed:', error);
+    throw new Error(
+      error instanceof Error 
+        ? error.message 
+        : 'Failed to generate EPUB. Please try again.'
+    );
   }
 }
