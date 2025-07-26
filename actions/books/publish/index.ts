@@ -1,6 +1,7 @@
 'use server';
 
-export { default as prepareEpubGeneration } from './epub-actions/prepareEpubGeneration';
-export { default as generateEpub } from './epub-actions/generateEpub';
-export { default as getEpubGenerationStatus } from './epub-actions/getEpubGenerationStatus';
-export { default as downloadEpub } from './epub-actions/downloadEpub';
+import { generateEpub } from './epub-actions/generateEpub';
+import { getEpubGenerationStatus } from './epub-actions/getEpubGenerationStatus';
+import { downloadEpub } from './epub-actions/downloadEpub';
+
+export { generateEpub, getEpubGenerationStatus, downloadEpub };

@@ -19,6 +19,7 @@ type BooksMenuProps = {
   onDelete?: () => void;
   onAddChapter?: () => void;
   hideEdit?: boolean; // New prop to hide Edit Book menu item
+  activeTab?: string; // Active tab for highlighting
 };
 
 export function BooksMenu({

@@ -5,13 +5,14 @@ import { getBookBySlug } from '@/actions/books/get-book-by-slug';
 import { generateEpub } from '@/actions/books/publish/epub-actions/generateEpub';
 import { headers } from 'next/headers';
 // Helper to get the base URL
-function getBaseUrl() {
+async function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_APP_URL) {
     return process.env.NEXT_PUBLIC_APP_URL;
   }
   
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  const host = headers().get('host');
+  const headerList = headers();
+  const host = headerList.get('host');
   return `${protocol}://${host}`;
 }
 
@@ -44,7 +45,7 @@ async function triggerGitHubWorkflow(
   const GITHUB_TOKEN = process.env.GITHUB_PAT;
   const REPO = process.env.GITHUB_REPO;
   const WORKFLOW = process.env.GITHUB_WORKFLOW || 'build-epub.yaml';
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   const payloadUrl = `${baseUrl}/api/books/${bookSlug}/publish/epub/payload`;
 
   if (!GITHUB_TOKEN || !REPO) {
@@ -207,8 +208,8 @@ async function handleEpubGeneration(
 }
 
 // Helper to generate the public URL for the payload
-function getPayloadUrl(slug: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+async function getPayloadUrl(slug: string) {
+  const baseUrl = await getBaseUrl();
   return `${baseUrl}/api/books/${slug}/payload.json`;
 }
 
@@ -227,9 +228,10 @@ export async function POST(
     const json = await payload.json();
     
     if (json.success) {
+      const payloadUrl = await getPayloadUrl(params.slug);
       return NextResponse.json({
         success: true,
-        payload_url: getPayloadUrl(params.slug),
+        payload_url: payloadUrl,
         timestamp: new Date().toISOString()
       });
     }

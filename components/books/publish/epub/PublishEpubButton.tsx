@@ -28,21 +28,33 @@ export function PublishEpubButton({
   size = 'default',
   showIcon = true,
 }: PublishEpubButtonProps) {
-  const { generateEpub, downloadEpub, status, progress, error, downloadUrl } =
-    useEpubGeneration(bookSlug);
+  const { 
+    generateEpub, 
+    downloadEpub, 
+    status, 
+    isGenerating,
+    error 
+  } = useEpubGeneration(bookSlug);
 
   const handleClick = async () => {
-    if (status === 'success' && downloadUrl) {
-      downloadEpub(`${bookSlug}.epub`);
+    const generationStatus = status as any; // Temporary any to access properties
+    if (generationStatus?.status === 'completed' && generationStatus.artifacts?.[0]?.id) {
+      // If we have a completed status with artifacts, trigger the download
+      await downloadEpub(generationStatus.artifacts[0].id);
     } else {
-      await generateEpub(options);
+      // Otherwise, generate a new EPUB
+      await generateEpub({
+        ...options,
+        output_format: 'epub' as const
+      });
     }
   };
 
   const getButtonText = () => {
-    if (status === 'generating') return `Generating${progress ? ` (${progress}%)` : ''}`;
-    if (status === 'success') return 'Download EPUB';
-    if (status === 'error') return 'Try Again';
+    if (isGenerating) return 'Generating...';
+    const generationStatus = status as any; // Temporary any to access properties
+    if (generationStatus?.status === 'completed') return 'Download EPUB';
+    if (error) return 'Try Again';
     return 'Generate EPUB';
   };
 
