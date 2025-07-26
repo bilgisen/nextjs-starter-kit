@@ -4,8 +4,6 @@ import { getSession } from '@/actions/auth/get-session';
 import { getBookBySlug } from '@/actions/books/get-book-by-slug';
 import { generateEpub } from '@/actions/books/publish/epub-actions/generateEpub';
 import { headers } from 'next/headers';
-import { getServerSession } from 'next-auth/next';
-
 // Helper to get the base URL
 function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_APP_URL) {
