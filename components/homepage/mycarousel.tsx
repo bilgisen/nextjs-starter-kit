@@ -39,7 +39,7 @@ export function MyCarousel() {
           {slides.map((slide, index) => (
             <div
               key={index}
-              className="embla__slide relative h-96 w-full flex-[0_0_50%] min-w-0"
+              className="embla__slide relative h-96 w-full flex-[0_0_100%] md:flex-[0_0_50%] min-w-0"
             >
               <Image
                 src={slide.image}

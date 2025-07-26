@@ -54,33 +54,37 @@ export const updateBook = async (formData: unknown) => {
   const slug = title ? slugify(title, { lower: true, strict: true }) : existingBook.slug;
 
   try {
-    const [updatedBook] = await db
-      .update(books)
-      .set({
-        title: title || existingBook.title,
-        description: description ?? existingBook.description,
-        author: author || existingBook.author,
-        publisher: publisher || existingBook.publisher,
-        isbn: isbn ?? existingBook.isbn,
-        publish_year: publish_year ?? existingBook.publish_year,
-        language: language || existingBook.language,
-        cover_image_url: cover_image_url ?? existingBook.cover_image_url,
-        slug,
-        updated_at: new Date().toISOString(),
-      })
-      .where(eq(books.slug, slug))
-      .returning();
+    try {
+      const [updatedBook] = await db
+        .update(books)
+        .set({
+          title: title || existingBook.title,
+          description: description ?? existingBook.description,
+          author: author || existingBook.author,
+          publisher: publisher || existingBook.publisher,
+          isbn: isbn ?? existingBook.isbn,
+          publish_year: publish_year ?? existingBook.publish_year,
+          language: language || existingBook.language,
+          cover_image_url: cover_image_url ?? existingBook.cover_image_url,
+          slug,
+          updated_at: new Date().toISOString(),
+        })
+        .where(eq(books.id, id))  // Use id for the where clause to be more precise
+        .returning();
 
-    if (!updatedBook) {
-      throw new Error("Failed to update book");
+      if (!updatedBook) {
+        throw new Error("Failed to update book");
+      }
+
+      return { 
+        success: true, 
+        book: updatedBook,
+        redirectUrl: `/dashboard/books/${slug}`
+      };
+    } catch (error) {
+      console.error('Error updating book:', error);
+      throw new Error("Failed to update book. Please try again.");
     }
-
-    // Return the updated book and let the client handle the redirect
-    return { 
-      success: true, 
-      book: updatedBook,
-      redirectUrl: `/dashboard/books/${slug}`
-    };
   } catch (error) {
     console.error("Error updating book:", error);
     throw new Error("Failed to update book. Please try again later.");

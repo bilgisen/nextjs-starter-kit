@@ -1,22 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Book } from "@/types/book";
-
-export interface BookWithChapters extends Book {
-  chapters: Array<{
-    id: string;
-    title: string;
-    content: string;
-    order: number;
-    level: number;
-    parentId: string | null;
-    createdAt: string;
-    updatedAt: string;
-  }>;
-  coverImage?: string | null;
-  description?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import type BookWithChapters from "@/types/book";
 
 export function useGetBookBySlug(slug: string) {
   return useQuery<BookWithChapters, Error>({

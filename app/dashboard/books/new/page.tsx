@@ -1,11 +1,29 @@
 // app/dashboard/books/new/page.tsx
+"use client";
+
 import { createBook } from "@/actions/books/create-book";
 import { BookInfoForm } from "@/components/books/book-info-form";
 import Link from "next/link";
+import { Separator } from "@/components/ui/separator";
+import { BookFormValues } from "@/components/books/book-info-form";
 
 export default function NewBookPage() {
+  const handleSubmit = async (data: BookFormValues) => {
+    const formData = new FormData();
+    
+    // Append all form fields to FormData
+    Object.entries(data).forEach(([key, value]) => {
+      // Only append if the value is not undefined or null
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+
+    return createBook(formData);
+  };
+
   return (
-    <div className="p-8 max-w-full mx-auto">
+    <div className="p-8 w-full mx-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Create New Book</h1>
         <Link
@@ -16,8 +34,8 @@ export default function NewBookPage() {
           Books
         </Link>
       </div>
-      <hr className="mb-6 border-gray-200 dark:border-gray-900" />
-      <BookInfoForm onSubmit={createBook} />
+      <Separator className="mb-6" />
+      <BookInfoForm onSubmit={handleSubmit} />
     </div>
   );
 }

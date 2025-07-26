@@ -1,7 +1,6 @@
 import { db } from "@/db/drizzle";
 import { books } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import type { InferSelectModel } from 'drizzle-orm';
 
 interface ChapterResponse {
   id: string;
@@ -14,6 +13,10 @@ interface ChapterResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+import BookWithChapters from '@/types/book';
+
+export { BookWithChapters };
 
 export interface Chapter {
   id: string;
@@ -28,11 +31,7 @@ export interface Chapter {
   updatedAt: Date;
 }
 
-export interface BookWithChapters extends Omit<InferSelectModel<typeof books>, 'createdAt' | 'updatedAt'> {
-  createdAt: Date;
-  updatedAt: Date;
-  chapters: Chapter[];
-}
+export type BookWithChapters = Awaited<ReturnType<typeof getBookWithChapters>>;
 
 export async function getBookWithOwnership(slug: string, userId: string) {
   const [book] = await db

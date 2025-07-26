@@ -1,0 +1,31 @@
+{
+  "book": {
+    "slug": "analira",
+    "title": "Analıra",
+    "language": "tr",
+    "cover_url": "https://image.eventmice.com/1752329635205-1752027339950.webp",
+    "stylesheet_url": "https://localhost:3000/styles/epub.css",
+    "imprint": {
+      "url": "https://localhost:3000/api/books/analira/imprint.html"
+    },
+    "chapters": [
+      {
+        "id": "c857f5c7-c743-4fb9-9377-b296d25da787",
+        "title": "Anılar",
+        "order": 0,
+        "url": "https://localhost:3000/api/books/analira/chapters/c857f5c7-c743-4fb9-9377-b296d25da787/c857f5c7-c743-4fb9-9377-b296d25da787-000.html",
+        "parent": null,
+        "level": 1,
+        "title_tag": "h2"
+      }
+    ]
+  },
+  "options": {
+    "generate_toc": true,
+    "include_imprint": true,
+    "toc_depth": 3,
+    "output_format": "epub",
+    "embed_metadata": true,
+    "cover": true
+  }
+}

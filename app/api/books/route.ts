@@ -16,6 +16,7 @@ export async function GET() {
     const userBooks = await db
       .select({
         id: books.id,
+        slug: books.slug,  // Include the slug field
         title: books.title,
         author: books.author,
         publisher: books.publisher,

@@ -8,11 +8,19 @@ import { books } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 
+// Helper to check GitHub Actions authentication
+function checkGitHubAuth(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  return authHeader === `Bearer ${process.env.NEXT_EPUB_SECRET}`;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string; chapterId: string } }
 ) {
-  return withApiAuth(request, async (user) => {
+  const isGitHubAction = checkGitHubAuth(request);
+  
+  const handler = async (user: { id: string; email: string; name?: string; image?: string }) => {
     try {
       // Get and validate parameters
       const { slug, chapterId } = await Promise.resolve(params);
@@ -55,14 +63,22 @@ export async function GET(
         { status: 500 }
       );
     }
-  });
+  };
+
+  if (isGitHubAction) {
+    return handler({ id: 'github-actions', role: 'admin' });
+  }
+  
+  return withApiAuth(request, handler);
 }
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { slug: string; chapterId: string } }
 ) {
-  return withApiAuth(request, async (user) => {
+  const isGitHubAction = checkGitHubAuth(request);
+  
+  const handler = async (user: { id: string; email: string; name?: string; image?: string }) => {
     try {
       // Get and validate parameters
       const { slug, chapterId } = await Promise.resolve(params);
@@ -109,14 +125,22 @@ export async function PUT(
         { status: 500 }
       );
     }
-  });
+  };
+
+  if (isGitHubAction) {
+    return handler({ id: 'github-actions', role: 'admin' });
+  }
+  
+  return withApiAuth(request, handler);
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { slug: string; chapterId: string } }
 ) {
-  return withApiAuth(request, async (user) => {
+  const isGitHubAction = checkGitHubAuth(request);
+  
+  const handler = async (user: { id: string; email: string; name?: string; image?: string }) => {
     try {
       // Get and validate parameters
       const { slug, chapterId } = await Promise.resolve(params);
@@ -162,5 +186,11 @@ export async function DELETE(
         { status: 500 }
       );
     }
-  });
+  };
+
+  if (isGitHubAction) {
+    return handler({ id: 'github-actions', role: 'admin' });
+  }
+  
+  return withApiAuth(request, handler);
 }

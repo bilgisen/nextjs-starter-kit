@@ -8,21 +8,21 @@ import '@/styles/rst-tailwind-theme.css';
 
 
 export const metadata: Metadata = {
-  title: "Next.js Starter Kit - Launch Your SAAS",
+  title: "BookEditor - Publish Your books",
   description:
-    "A modern, full-stack Next.js starter kit with authentication, payments, and dashboard. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
+    "Publish your books with BookEditor.",
   openGraph: {
-    title: "Next.js Starter Kit",
+    title: "BookEditor - Publish Your books",
     description:
-      "A modern, full-stack Next.js starter kit with authentication, payments, and dashboard. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-    url: "nextstarter.xyz",
-    siteName: "Next.js Starter Kit",
+      "Publish your books with BookEditor.",
+    url: "bookeditor.xyz",
+    siteName: "BookEditor - Publish Your books",
     images: [
       {
         url: "https://jdj14ctwppwprnqu.public.blob.vercel-storage.com/nsk-w9fFwBBmLDLxrB896I4xqngTUEEovS.png",
         width: 1200,
         height: 630,
-        alt: "Next.js Starter Kit",
+        alt: "BookEditor - Publish Your books",
       },
     ],
     locale: "en-US",

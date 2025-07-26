@@ -1,45 +1,32 @@
 'use server';
 
-import { auth } from './auth';
+import { getSession } from '@/actions/auth/get-session';
 
 export type User = {
   id: string;
   email: string;
-  name?: string | null;
-  image?: string | null;
+  name?: string;
+  image?: string;
 };
 
-// Helper to remove first argument (User) from tuple
-// @ts-expect-error - _ is a placeholder for the first type parameter
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type Tail<T extends unknown[]> = T extends [infer _, ...infer Rest] ? Rest : [];
-
-export async function withServerAuth<
-  Args extends [User, ...unknown[]],
-  Return
->(
-  handler: (...args: Args) => Promise<Return>
-): Promise<(...args: Tail<Args>) => Promise<Return>> {
-  'use server';
-
-  const serverAction = async (...args: Tail<Args>): Promise<Return> => {
-    const session = await auth.getSession();
-    if (!session?.user) {
-      throw new Error('Unauthorized');
-    }
-
-    return handler(session.user as User, ...args);
-  };
-
-  return serverAction;
-}
-
+// ✅ Server Action içinde kullanıcıyı almak
 export async function getAuthUser(): Promise<User> {
-  'use server';
-
-  const session = await auth.getSession();
+  const session = await getSession();
   if (!session?.user) {
-    throw new Error('Not authenticated');
+    console.error('❌ getAuthUser: Kullanıcı bulunamadı');
+    throw new Error('Unauthorized - Please sign in');
   }
   return session.user as User;
 }
+
+// ✅ Her server action'da tekrar auth kodu yazmamak için reusable wrapper
+export async function runWithAuth<Fn extends (user: User, ...args: unknown[]) => Promise<unknown>>(
+  handler: Fn,
+  ...args: TailParameters<Fn>
+): Promise<Awaited<ReturnType<Fn>>> {
+  const user = await getAuthUser();
+  return handler(user, ...args);
+}
+
+// ✅ Yardımcı generic tipler
+type TailParameters<T> = T extends (first: unknown, ...rest: infer R) => unknown ? R : never;

@@ -1,9 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Book } from "@/types/book";
-import { Badge } from "@/components/ui/badge";
-import { ActionsCell } from "./actions-cell";
+import { BooksMenu } from "../books-menu";
+import React from "react";
 
-type ColumnConfig = {
+export type ColumnConfig = {
   onView?: (slug: string) => void;
   onEdit?: (slug: string) => void;
   onDelete?: (slug: string) => void;
@@ -22,11 +22,7 @@ export function getColumns<TData extends Book>({
       header: "Title",
       cell: ({ row }) => {
         const book = row.original as Book;
-        return (
-          <div className="font-medium">
-            {book.title || "Untitled"}
-          </div>
-        );
+        return <div className="font-medium">{book.title || "Untitled"}</div>;
       },
     },
     {
@@ -46,31 +42,41 @@ export function getColumns<TData extends Book>({
       },
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: "language",
+      header: "Language",
       cell: ({ row }) => {
         const book = row.original as Book;
-        const variant = {
-          draft: "outline",
-          published: "default",
-          archived: "secondary",
-        }[book.status] as "outline" | "default" | "secondary";
-
-        return <Badge variant={variant}>{book.status}</Badge>;
+        return book.language || "-";
+      },
+    },
+    {
+      accessorKey: "publish_year",
+      header: "Year",
+      cell: ({ row }) => {
+        const book = row.original as Book;
+        return book.publish_year || "-";
       },
     },
     {
       id: "actions",
       cell: ({ row }) => {
         const book = row.original as Book;
+        
+        if (!book.slug) {
+          console.error('Book is missing slug:', book);
+          return null; // Don't render the menu if there's no slug
+        }
+
         return (
-          <ActionsCell
-            slug={book.slug}
-            onView={onView}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onAddChapter={onAddChapter}
-          />
+          <div className="flex justify-end pr-4">
+            <BooksMenu
+              slug={book.slug}
+              onView={onView ? () => onView(book.slug) : undefined}
+              onEdit={onEdit ? () => onEdit(book.slug) : undefined}
+              onDelete={onDelete ? () => onDelete(book.slug) : undefined}
+              onAddChapter={onAddChapter ? () => onAddChapter(book.slug) : undefined}
+            />
+          </div>
         );
       },
     },

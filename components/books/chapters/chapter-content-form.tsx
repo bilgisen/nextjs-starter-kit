@@ -4,7 +4,7 @@ import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -16,7 +16,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -68,21 +67,6 @@ export const ChapterContentForm = React.forwardRef<HTMLFormElement, ChapterConte
 
   const { handleSubmit, control, watch, setValue } = form;
 
-  const watchedParentId = watch("parent_chapter_id");
-
-  const [selectValue, setSelectValue] = useState<string | null>(
-    watchedParentId ?? null
-  );
-
-  useEffect(() => {
-    setSelectValue(watchedParentId ?? null);
-  }, [watchedParentId]);
-
-  const handleParentChange = (value: string | null) => {
-    setSelectValue(value);
-    setValue("parent_chapter_id", value, { shouldValidate: true });
-  };
-
   const handleFormSubmit = async (values: ChapterFormValues) => {
     try {
       setIsSubmitting(true);
@@ -116,55 +100,51 @@ export const ChapterContentForm = React.forwardRef<HTMLFormElement, ChapterConte
   return (
     <Form {...form}>
       <form ref={ref} onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-        {/* Title */}
-        <FormField
-          control={control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Chapter Title</FormLabel>
-              <FormControl>
-                <Input
-                  disabled={disabled}
-                  placeholder="Enter chapter title"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-muted-foreground/50">Chapter Title</FormLabel>
+                <FormControl>
+                  <Input 
+                    disabled={disabled}
+                    placeholder="Enter chapter title"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* Parent Chapter */}
-        <FormField
-          control={control}
-          name="parent_chapter_id"
-          render={() => (
-            <FormItem>
-              <FormLabel>Parent Chapter (Optional)</FormLabel>
-              <FormControl>
-                <ParentChapterSelect
-                  parentChapters={filteredParentChapters}
-                  value={selectValue}
-                  onChange={handleParentChange}
-                  disabled={disabled}
-                />
-              </FormControl>
-              <FormDescription>
-                Select a parent chapter to create a nested structure.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={control}
+            name="parent_chapter_id"
+            render={() => (
+              <FormItem>
+                <FormLabel className="text-muted-foreground/50">Parent Chapter (Optional)</FormLabel>
+                <FormControl>
+                  <ParentChapterSelect
+                    parentChapters={filteredParentChapters}
+                    value={watch("parent_chapter_id")}
+                    onChange={(value) => setValue("parent_chapter_id", value)}
+                    disabled={disabled}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {/* Content with Tiptap */}
         <Controller
-          name="content"
+          name="content"          
           control={control}
           render={({ field: { onChange, value } }) => (
             <FormItem>
-              <FormLabel>Chapter Content</FormLabel>
               <FormControl>
                 <SimpleEditor
                   initialContent={value || ''}

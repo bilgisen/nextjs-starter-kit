@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { RstChapterTree } from "@/components/books/chapters/rst-chapter-tree";
 import { ChapterNode } from '@/types/dnd';
 import { updateChapterOrder } from '@/actions/books/chapters/update-chapter-order';
 import { Separator } from "@/components/ui/separator";
+import { BooksMenu } from "@/components/books/books-menu";
 
 export default function ChaptersPage() {
   const params = useParams();
@@ -32,13 +33,11 @@ export default function ChaptersPage() {
   console.log('ChaptersPage - Book ID:', bookId);
   
   const isLoading = isLoadingBook || isLoadingChapters;
-  const [isSaving, setIsSaving] = useState(false);
 
   // Handle chapter order updates
   const handleSave = useCallback(async (updatedChapters: ChapterNode[]) => {
     if (!bookSlug) return;
     
-    setIsSaving(true);
     try {
       // Convert ChapterNode[] to the expected format
       const chaptersToSave = updatedChapters.map(chapter => ({
@@ -58,8 +57,7 @@ export default function ChaptersPage() {
     } catch (error) {
       console.error('Error updating chapter order:', error);
       toast.error('An error occurred while updating chapter order');
-    } finally {
-      setIsSaving(false);
+      throw error; // Re-throw to allow the RstChapterTree to handle the error state
     }
   }, [bookSlug, refetchChapters]);
 
@@ -108,16 +106,12 @@ export default function ChaptersPage() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Chapters</h1>
-          <p className="text-muted-foreground">
-            Organize and manage your book&apos;s chapters
-          </p>
+          <h1 className="text-2xl font-bold">Chapters</h1>
+          <p className="text-muted-foreground">Manage chapters for {book?.title || 'this book'}</p>
         </div>
-        <Button onClick={handleAddChapter} disabled={isSaving}>
-          <Plus className="mr-2 h-4 w-4" /> Add Chapter
-        </Button>
+        <BooksMenu slug={bookSlug} />
       </div>
       <Separator className="my-6" />
       <div className="p-0">

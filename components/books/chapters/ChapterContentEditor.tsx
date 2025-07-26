@@ -17,7 +17,7 @@ const SimpleEditor = dynamic(
 
 function EditorLoading({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-lg border bg-muted/50 min-h-[300px] p-4", className)}>
+    <div className={cn("p-4", className)}>
       <p className="text-muted-foreground">Loading editor...</p>
     </div>
   )
@@ -47,8 +47,8 @@ function ChapterContentEditorComponent({
   const error = errors[name]?.message as string | undefined
 
   return (
-    <div className="w-full">
-      <div className={cn("rounded-lg border", className, disabled && 'opacity-50 pointer-events-none')}>
+    <div className="w-full bg-background">
+      <div className={cn("rounded-lg border bg-foreground", className, disabled && 'opacity-50 pointer-events-none')}>
         <Controller
           name={name}
           control={control}

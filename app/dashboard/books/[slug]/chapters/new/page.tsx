@@ -8,6 +8,7 @@ import { ChapterContentForm } from "@/components/books/chapters/chapter-content-
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { useGetBook } from "@/queries/books/get-book";
+import { BooksMenu } from "@/components/books/books-menu";
 
 export default function NewChapterPage() {
   const router = useRouter();
@@ -28,62 +29,50 @@ export default function NewChapterPage() {
     parent_chapter_id?: string | null;
   };
 
-  const handleSubmit = async (data: ChapterFormValues) => {
-    if (!book) return;
+  const handleSubmit = async (data: ChapterFormValues): Promise<{ success: boolean; redirectUrl?: string }> => {
+    if (!book) {
+      return { success: false };
+    }
     
     setFormError(null);
     setSuccess(false);
     setIsSubmitting(true);
     
     try {
-      // Get the current user
       const user = await getAuthUser();
-      console.log("Current user:", user);
       
       if (!user?.id) {
         throw new Error("You must be logged in to create a chapter");
       }
       
-      console.log("User ID:", user.id, "Type:", typeof user.id);
-      
-      // Calculate the next order number (max existing order + 1, or 0 if no chapters)
       const nextOrder = chapters.length > 0 
-        ? Math.max(...chapters.map((c: { order?: number }) => c.order || 0)) + 1 
+        ? Math.max(...chapters.map((ch: { order: number }) => ch.order)) + 1 
         : 0;
       
-      // Calculate the correct level based on parent
       const parentChapter = data.parent_chapter_id 
-        ? chapters.find((c: { id: string }) => c.id === data.parent_chapter_id)
+        ? chapters.find((ch: { id: string }) => ch.id === data.parent_chapter_id)
         : null;
-      
       const level = parentChapter ? (parentChapter.level || 0) + 1 : 0;
       
-      // Create the chapter data with all required fields
-      const chapterData = {
-        title: data.title,
-        content: data.content,
-        order: nextOrder,
+      await createChapter({
+        ...data,
         bookId: book.id,
+        order: nextOrder,
         userId: user.id,
-        level: level,
         parentId: data.parent_chapter_id || null,
-      };
-      
-      console.log("Submitting chapter:", chapterData);
-      
-      // Pass the data directly to createChapter
-      const createdChapter = await createChapter(chapterData);
-      console.log("Created chapter:", createdChapter);
-      
-      // Invalidate the chapters query to refetch the list
-      router.refresh();
+        level
+      });
       
       setSuccess(true);
-      setTimeout(() => router.push(`/dashboard/books/${slug}/chapters`), 1200);
-    } catch (e: unknown) {
-      console.error("Error creating chapter:", e);
-      const errorMessage = e instanceof Error ? e.message : "Failed to create chapter.";
+      router.refresh();
+      return { 
+        success: true, 
+        redirectUrl: `/dashboard/books/${slug}/chapters`
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create chapter';
       setFormError(errorMessage);
+      return { success: false };
     } finally {
       setIsSubmitting(false);
     }
@@ -102,15 +91,21 @@ export default function NewChapterPage() {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
-      <h1 className="text-2xl font-bold mb-2">New Chapter</h1>
-      <p className="text-muted-foreground mb-6">for {book.title}</p>
+    <div className="w-full max-w-full mx-auto p-4 md:p-8">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h1 className="text-2xl font-bold">New Chapter</h1>
+          <p className="text-muted-foreground">for {book.title}</p>
+        </div>
+        <BooksMenu slug={slug} />
+      </div>
       <Separator className="mb-6" />
       
       <ChapterContentForm 
         onSubmit={handleSubmit} 
-        parentChapters={chapters} 
+        parentChapters={chapters}
         loading={isSubmitting}
+        bookSlug={slug}
       />
       
       {formError && (

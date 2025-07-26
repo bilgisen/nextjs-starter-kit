@@ -28,12 +28,13 @@ export default function BooksDashboardPage() {
   }, [router]);
 
   const columns = useMemo(
-    () => getColumns({
-      onView: handleView,
-      onEdit: handleEdit,
-      onDelete: handleDelete,
-      onAddChapter: handleAddChapter
-    }),
+    () =>
+      getColumns({
+        onView: handleView,
+        onEdit: handleEdit,
+        onDelete: handleDelete,
+        onAddChapter: handleAddChapter,
+      }),
     [handleView, handleEdit, handleDelete, handleAddChapter]
   );
 
@@ -52,13 +53,21 @@ export default function BooksDashboardPage() {
         <div className="bg-red-50 border-l-4 border-red-400 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+              <svg
+                className="h-5 w-5 text-red-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
             <div className="ml-3">
               <p className="text-sm text-red-700">
-                {error?.message || 'Failed to load books. Please try again later.'}
+                {error?.message || "Failed to load books. Please try again later."}
               </p>
             </div>
           </div>
@@ -79,18 +88,14 @@ export default function BooksDashboardPage() {
         </button>
       </div>
       <Separator className="my-4" />
-      {isError ? (
-        <div className="text-red-600">{(error as Error)?.message || "Failed to load books."}</div>
-      ) : (
-        <BookDataTable 
-          data={books || []} 
-          columns={columns}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onAddChapter={handleAddChapter}
-        />
-      )}
+      <BookDataTable
+        data={books || []}
+        columns={columns}
+        onView={handleView}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onAddChapter={handleAddChapter}
+      />
     </div>
   );
 }
