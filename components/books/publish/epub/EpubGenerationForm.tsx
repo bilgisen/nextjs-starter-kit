@@ -3,15 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Loader2, BookOpenText, Download } from 'lucide-react';
+import { BookOpenText, RefreshCw } from 'lucide-react';
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 // Custom Components
@@ -40,10 +38,10 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
     generateEpub,
     downloadEpub,
     status,
-    progress,
+    isGenerating,
+    isStatusLoading,
+    isDownloading,
     error,
-    downloadUrl,
-    reset: resetGeneration,
   } = useEpubGeneration(bookSlug);
 
   // Form State
@@ -51,22 +49,10 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
     generate_toc: true,
     include_imprint: true,
     toc_depth: 3,
+    output_format: 'epub' as const,
     embed_metadata: true,
     cover: !!book.coverImageUrl,
   });
-
-  // Handle download when URL is available
-  useEffect(() => {
-    if (downloadUrl) {
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `${bookSlug}.epub`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
-    }
-  }, [downloadUrl, bookSlug]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,15 +66,17 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
     }
   };
 
-  // Handle download
-  const handleDownload = () => {
-    if (!downloadUrl) return;
-    downloadEpub(`${bookSlug}.epub`);
-  };
-
   // Handle reset
   const handleReset = () => {
-    resetGeneration();
+    // Reset the form state
+    setOptions({
+      generate_toc: true,
+      include_imprint: true,
+      toc_depth: 3,
+      output_format: 'epub',
+      embed_metadata: true,
+      cover: !!book.coverImageUrl,
+    });
   };
 
   return (
@@ -116,7 +104,7 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
                           generate_toc: checked === true,
                         })
                       }
-                      disabled={status === 'generating'}
+                      disabled={isGenerating}
                     />
                     <div className="grid gap-1.5 leading-none">
                       <Label htmlFor="generate_toc" className="font-medium">
@@ -146,7 +134,7 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
                           })
                         }
                         className="w-full"
-                        disabled={status === 'generating'}
+                        disabled={isGenerating}
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>H1 Only</span>
@@ -165,7 +153,7 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
                           include_imprint: checked === true,
                         })
                       }
-                      disabled={status === 'generating'}
+                      disabled={isGenerating}
                     />
                     <div className="grid gap-1.5 leading-none">
                       <Label htmlFor="include_imprint" className="font-medium">
@@ -187,7 +175,7 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
                           embed_metadata: checked === true,
                         })
                       }
-                      disabled={status === 'generating'}
+                      disabled={isGenerating}
                     />
                     <div className="grid gap-1.5 leading-none">
                       <Label htmlFor="embed_metadata" className="font-medium">
@@ -251,12 +239,12 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
                     variant="outline"
                     size="sm"
                     onClick={handleReset}
-                    disabled={status === 'generating'}
+                    disabled={isGenerating}
                   >
                     <RefreshCw
                       className={cn(
                         'mr-2 h-4 w-4',
-                        status === 'generating' && 'animate-spin'
+                        isGenerating && 'animate-spin'
                       )}
                     />
                     Reset
@@ -286,9 +274,9 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
 
           {/* Generation Status */}
           <EpubGenerationStatus
-            status={status}
-            progress={progress}
-            error={error}
+            status={isGenerating ? 'generating' : error ? 'error' : 'idle'}
+            progress={isGenerating ? 50 : 100}
+            error={error?.message || null}
           />
         </div>
       </div>
