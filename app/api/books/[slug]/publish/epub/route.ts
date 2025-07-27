@@ -39,8 +39,7 @@ type WorkflowDispatchResponse = {
 };
 
 async function triggerGitHubWorkflow(
-  bookSlug: string,
-  options: z.infer<typeof epubGenerationSchema>['options']
+  bookSlug: string
 ): Promise<WorkflowDispatchResponse> {
   const GITHUB_TOKEN = process.env.GITHUB_PAT;
   const REPO = process.env.GITHUB_REPO;
@@ -171,7 +170,7 @@ async function handleEpubGeneration(
       }
 
       // In production, trigger GitHub Actions workflow
-      const workflow = await triggerGitHubWorkflow(slug, options);
+      const workflow = await triggerGitHubWorkflow(slug);
       
       return NextResponse.json({
         success: true,

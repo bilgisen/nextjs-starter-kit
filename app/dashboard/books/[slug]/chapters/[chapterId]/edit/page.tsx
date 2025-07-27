@@ -2,12 +2,9 @@
 
 import React, { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
-import { Eye, Trash } from "lucide-react";
 
 import { ChapterContentForm } from "@/components/books/chapters/chapter-content-form";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useGetChapter } from "@/queries/books/chapters/get-chapter";
@@ -16,6 +13,8 @@ import { updateChapter } from "@/actions/books/chapters/update-chapter";
 import { ChapterUpdateData } from "@/types/chapter";
 import type { ChapterFormData } from "@/schemas/chapter-schema";
 import type { Chapter } from "@/types/chapter";
+import { BooksMenu } from "@/components/books/books-menu";
+import { useGetBook } from "@/queries/books/get-book";
 
 interface PageParams {
   slug: string;
@@ -32,6 +31,7 @@ export default function EditChapterPage({ params }: PageProps) {
 
   const { data: chapter, isLoading, error } = useGetChapter(bookSlug, chapterId);
   const { data: chapters = [] } = useGetChapters(bookSlug);
+  const { data: book } = useGetBook(bookSlug);
 
   const [formError, setFormError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -124,23 +124,17 @@ export default function EditChapterPage({ params }: PageProps) {
   if (error || !chapter) return <div className="text-red-500">Chapter not found.</div>;
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
+    <div className="w-full max-w-full mx-auto p-4 md:p-8">
       <div className="flex flex-col space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Edit Chapter</h1>
-            <p className="text-sm text-muted-foreground">{chapter.title}</p>
+            <p className="text-sm text-muted-foreground">{chapter.title} {book ? `| ${book.title}` : ''}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/dashboard/books/${bookSlug}/chapters/${chapterId}`}>
-                <Eye className="mr-2 h-4 w-4" /> View
-              </Link>
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => console.log("Delete", chapterId)}>
-              <Trash className="mr-2 h-4 w-4" /> Delete
-            </Button>
-          </div>
+          <BooksMenu 
+            slug={bookSlug}
+            onView={() => router.push(`/dashboard/books/${bookSlug}/chapters/${chapterId}`)}
+          />
         </div>
 
         <Separator />
