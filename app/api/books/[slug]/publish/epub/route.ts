@@ -52,6 +52,12 @@ async function triggerGitHubWorkflow(
     throw new Error('GitHub integration is not properly configured');
   }
 
+  // Ensure we have the required token
+  const token = process.env.NEXT_EPUB_SECRET;
+  if (!token) {
+    throw new Error('NEXT_EPUB_SECRET environment variable is not set');
+  }
+
   // Trigger the workflow
   const response = await fetch(
     `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
@@ -65,9 +71,9 @@ async function triggerGitHubWorkflow(
       body: JSON.stringify({
         ref: 'main', // or your default branch
         inputs: {
-          book_slug: bookSlug,
-          payload_url: payloadUrl,
-          token: process.env.NEXT_EPUB_SECRET,
+          slug: bookSlug,  // Changed from book_slug to match workflow input name
+          payload: payloadUrl,
+          token: token,  // Pass the token as required by the workflow
         },
       }),
     }
