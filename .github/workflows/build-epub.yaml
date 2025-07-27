@@ -1,0 +1,113 @@
+name: Build and Publish EPUB
+
+on:
+  workflow_dispatch:
+    inputs:
+      book_slug:
+        description: 'Book slug'
+        required: true
+        type: string
+      payload_url:
+        description: 'URL to fetch the book payload'
+        required: true
+        type: string
+      token:
+        description: 'Authentication token'
+        required: true
+        type: string
+
+env:
+  NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://your-app-url.com' }}
+  NEXT_EPUB_SECRET: ${{ secrets.NEXT_EPUB_SECRET }}
+
+jobs:
+  build-epub:
+    name: Build EPUB
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch book data
+        id: fetch-book
+        env:
+          AUTH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Fetching book data from ${{ github.event.inputs.payload_url }}"
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.token }}" "${{ github.event.inputs.payload_url }}")
+          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+          
+          # Extract the download URL from the response
+          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.download_url // empty')
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Failed to get download URL from response"
+            exit 1
+          fi
+          echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
+
+      - name: Download generated EPUB
+        uses: actions/download-artifact@v3
+        with:
+          name: generated-epub
+          path: ./epub-output
+
+      - name: Upload EPUB to storage
+        run: |
+          # Here you would implement the actual upload to your storage solution
+          # For example, uploading to AWS S3, Google Cloud Storage, etc.
+          echo "Uploading EPUB to storage..."
+          # Example: aws s3 cp ./epub-output/book.epub s3://your-bucket/books/${{ github.event.inputs.book_slug }}.epub
+          
+          # For now, we'll just create a dummy file to simulate the upload
+          mkdir -p ./epub-output
+          echo "Dummy EPUB content" > ./epub-output/book.epub
+          
+          # Set the download URL for the next step
+          echo "EPUB_UPLOAD_URL=https://example.com/books/${{ github.event.inputs.book_slug }}.epub" >> $GITHUB_ENV
+
+      - name: Notify completion
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        run: |
+          curl -X POST $WEBHOOK_URL \
+            -H "Content-Type: application/json" \
+            -d '{
+              "book_slug": "${{ github.event.inputs.book_slug }}",
+              "status": "completed",
+              "download_url": "$EPUB_UPLOAD_URL",
+              "run_id": "$GITHUB_RUN_ID"
+            }'
+
+      - name: Upload EPUB as artifact (for debugging)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: generated-epub
+          path: ./epub-output
+          retention-days: 1
+
+      - name: Handle failure
+        if: failure()
+        run: |
+          echo "EPUB generation failed"
+          # Notify about the failure
+          if [ -n "$WEBHOOK_URL" ]; then
+            curl -X POST $WEBHOOK_URL \
+              -H "Content-Type: application/json" \
+              -d '{
+                "book_slug": "${{ github.event.inputs.book_slug }}",
+                "status": "failed",
+                "error": "EPUB generation failed",
+                "run_id": "$GITHUB_RUN_ID"
+              }'
+          fi
