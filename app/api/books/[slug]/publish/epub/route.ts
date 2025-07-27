@@ -11,8 +11,8 @@ async function getBaseUrl() {
   }
   
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  const headerList = headers();
-  const host = headerList.get('host');
+  const headerList = await headers();
+  const host = headerList.get('host') || 'localhost:3000'; // Provide a default host
   return `${protocol}://${host}`;
 }
 
@@ -283,6 +283,7 @@ export async function POST(
         inputs: {
           slug,
           payload: JSON.stringify(payload),
+          token: process.env.NEXT_EPUB_SECRET, // Add the required token input
         },
       }),
     });
