@@ -44,21 +44,18 @@ jobs:
           AUTH_TOKEN: ${{ github.event.inputs.token }}
         run: |
           echo "Fetching book data from ${{ github.event.inputs.payload }}"
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.token }}" "${{ github.event.inputs.payload }}")
-          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
-          
-          # Extract the download URL from the response
-          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.download_url // empty')
-          if [ -z "$DOWNLOAD_URL" ]; then
-            echo "No download URL found in response"
+          mkdir -p ./book-content
+          curl -s -H "Authorization: Bearer ${{ github.event.inputs.token }}" \
+            -o ./book-content/book.json \
+            "${{ github.event.inputs.payload }}"
+            
+          # Verify the file was downloaded
+          if [ ! -f "./book-content/book.json" ]; then
+            echo "Failed to download book data"
             exit 1
           fi
-          echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
-
-      - name: Download book content
-        run: |
-          mkdir -p ./book-content
-          curl -H "Authorization: Bearer ${{ github.event.inputs.token }}" -L "${{ steps.fetch-book.outputs.download_url }}" -o ./book-content/book.json
+          
+          echo "Book data downloaded successfully"
 
       - name: Generate EPUB
         run: |
