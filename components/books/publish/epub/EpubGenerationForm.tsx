@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { BookOpenText, RefreshCw } from 'lucide-react';
 
@@ -31,8 +30,6 @@ interface EpubGenerationFormProps {
 }
 
 export function EpubGenerationForm({ bookSlug, book, className }: EpubGenerationFormProps) {
-  const router = useRouter();
-  
   // EPUB Generation Hook
   const {
     generateEpub,

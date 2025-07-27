@@ -223,28 +223,30 @@ export async function POST(
   request: Request,
   { params }: { params: { slug: string } }
 ) {
-  const authHeader = request.headers.get('authorization');
-  const isGitHubAction = authHeader === `Bearer ${process.env.NEXT_EPUB_SECRET}`;
-  const { slug } = params;
-
-  // For GitHub Actions, return the public URL where the payload can be downloaded
-  if (isGitHubAction) {
-    const payload = await handleEpubGeneration(request, { params });
-    const json = await payload.json();
-    
-    if (json.success) {
-      const payloadUrl = await getPayloadUrl(params.slug);
-      return NextResponse.json({
-        success: true,
-        payload_url: payloadUrl,
-        timestamp: new Date().toISOString()
-      });
-    }
-    return payload; // Return error response if generation failed
-  }
-
-  // For regular API users, trigger GitHub Actions workflow
   try {
+    // Ensure params are properly awaited
+    const { slug } = await Promise.resolve(params);
+    const authHeader = request.headers.get('authorization');
+    const isGitHubAction = authHeader === `Bearer ${process.env.NEXT_EPUB_SECRET}`;
+
+    // For GitHub Actions, return the public URL where the payload can be downloaded
+    if (isGitHubAction) {
+      const payload = await handleEpubGeneration(request, { params });
+      const json = await payload.json();
+      
+      if (json.success) {
+        const payloadUrl = await getPayloadUrl(slug);
+        return NextResponse.json({
+          success: true,
+          payload_url: payloadUrl,
+          timestamp: new Date().toISOString()
+        });
+      }
+      return payload; // Return error response if generation failed
+    }
+
+    // For regular API users, trigger GitHub Actions workflow
+    try {
     const GITHUB_TOKEN = process.env.GITHUB_PAT;
     const REPO = process.env.GITHUB_REPO;
     const WORKFLOW = process.env.GITHUB_WORKFLOW;
@@ -323,14 +325,25 @@ export async function POST(
       },
       timestamp: new Date().toISOString(),
     });
+    } catch (error) {
+      console.error('Error triggering GitHub Actions:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to trigger build process',
+          message: errorMessage 
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error triggering GitHub Actions:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in EPUB generation endpoint:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to trigger build process',
-        message: errorMessage 
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
       },
       { status: 500 }
     );
