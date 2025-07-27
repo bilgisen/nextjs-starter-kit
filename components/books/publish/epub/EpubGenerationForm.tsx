@@ -33,11 +33,8 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
   // EPUB Generation Hook
   const {
     generateEpub,
-    downloadEpub,
     status,
     isGenerating,
-    isStatusLoading,
-    isDownloading,
     error,
   } = useEpubGeneration(bookSlug);
 

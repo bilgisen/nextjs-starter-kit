@@ -5,6 +5,11 @@ import { Loader2, Download, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEpubGeneration } from '@/queries/books/useEpubGeneration';
 
+interface GenerationStatus {
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  artifacts?: Array<{ id: string; url: string }>;
+}
+
 interface PublishEpubButtonProps {
   bookSlug: string;
   options: {
@@ -37,7 +42,7 @@ export function PublishEpubButton({
   } = useEpubGeneration(bookSlug);
 
   const handleClick = async () => {
-    const generationStatus = status as any; // Temporary any to access properties
+    const generationStatus = status as GenerationStatus;
     if (generationStatus?.status === 'completed' && generationStatus.artifacts?.[0]?.id) {
       // If we have a completed status with artifacts, trigger the download
       await downloadEpub(generationStatus.artifacts[0].id);
@@ -52,7 +57,7 @@ export function PublishEpubButton({
 
   const getButtonText = () => {
     if (isGenerating) return 'Generating...';
-    const generationStatus = status as any; // Temporary any to access properties
+    const generationStatus = status as GenerationStatus;
     if (generationStatus?.status === 'completed') return 'Download EPUB';
     if (error) return 'Try Again';
     return 'Generate EPUB';
