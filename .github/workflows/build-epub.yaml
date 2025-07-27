@@ -50,64 +50,25 @@ jobs:
           # Extract the download URL from the response
           DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.download_url // empty')
           if [ -z "$DOWNLOAD_URL" ]; then
-            echo "Failed to get download URL from response"
+            echo "No download URL found in response"
             exit 1
           fi
           echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
 
-      - name: Download generated EPUB
-        uses: actions/download-artifact@v3
-        with:
-          name: generated-epub
-          path: ./epub-output
-
-      - name: Upload EPUB to storage
+      - name: Download book content
         run: |
-          # Here you would implement the actual upload to your storage solution
-          # For example, uploading to AWS S3, Google Cloud Storage, etc.
-          echo "Uploading EPUB to storage..."
-          # Example: aws s3 cp ./epub-output/book.epub s3://your-bucket/books/${{ github.event.inputs.book_slug }}.epub
-          
-          # For now, we'll just create a dummy file to simulate the upload
-          mkdir -p ./epub-output
-          echo "Dummy EPUB content" > ./epub-output/book.epub
-          
-          # Set the download URL for the next step
-          echo "EPUB_UPLOAD_URL=https://example.com/books/${{ github.event.inputs.book_slug }}.epub" >> $GITHUB_ENV
+          mkdir -p ./book-content
+          curl -H "Authorization: Bearer ${{ github.event.inputs.token }}" -L "${{ steps.fetch-book.outputs.download_url }}" -o ./book-content/book.json
 
-      - name: Notify completion
-        env:
-          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      - name: Generate EPUB
         run: |
-          curl -X POST $WEBHOOK_URL \
-            -H "Content-Type: application/json" \
-            -d '{
-              "book_slug": "${{ github.event.inputs.book_slug }}",
-              "status": "completed",
-              "download_url": "$EPUB_UPLOAD_URL",
-              "run_id": "$GITHUB_RUN_ID"
-            }'
+          # Your EPUB generation script here
+          echo "Generating EPUB for ${{ github.event.inputs.book_slug }}"
+          # Example: node scripts/generate-epub.js ./book-content/book.json
 
-      - name: Upload EPUB as artifact (for debugging)
-        if: always()
+      - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: generated-epub
-          path: ./epub-output
+          name: epub-file
+          path: ./output/*.epub
           retention-days: 1
-
-      - name: Handle failure
-        if: failure()
-        run: |
-          echo "EPUB generation failed"
-          # Notify about the failure
-          if [ -n "$WEBHOOK_URL" ]; then
-            curl -X POST $WEBHOOK_URL \
-              -H "Content-Type: application/json" \
-              -d '{
-                "book_slug": "${{ github.event.inputs.book_slug }}",
-                "status": "failed",
-                "error": "EPUB generation failed",
-                "run_id": "$GITHUB_RUN_ID"
-              }'
-          fi
