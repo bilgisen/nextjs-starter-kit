@@ -36,35 +36,152 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
-      - name: Fetch book data
-        id: fetch-book
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pandoc \
+            texlive-xetex \
+            texlive-fonts-recommended \
+            texlive-latex-recommended \
+            jq \
+            wget \
+            parallel
+
+      - name: Fetch Book Payload
+        id: fetch-payload
         env:
           AUTH_TOKEN: ${{ github.event.inputs.token }}
+          BOOK_SLUG: ${{ github.event.inputs.slug }}
+          BASE_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.vercel.app' }}
         run: |
-          echo "Fetching book data from ${{ github.event.inputs.payload }}"
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.token }}" "${{ github.event.inputs.payload }}")
-          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+          echo "Fetching book payload for $BOOK_SLUG"
+          mkdir -p ./book-content/chapters
           
-          # Extract the download URL from the response
-          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.download_url // empty')
-          if [ -z "$DOWNLOAD_URL" ]; then
-            echo "No download URL found in response"
+          # Fetch the book payload
+          if ! wget --header="Authorization: Bearer $AUTH_TOKEN" \
+                    --output-document=./book-content/payload.json \
+                    "$BASE_URL/api/books/$BOOK_SLUG/payload"; then
+            echo "Failed to download book payload"
             exit 1
           fi
-          echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
+          
+          # Extract book info
+          BOOK_TITLE=$(jq -r '.book.title // "Untitled Book"' ./book-content/payload.json)
+          BOOK_LANG=$(jq -r '.book.language // "en"' ./book-content/payload.json)
+          COVER_URL=$(jq -r '.book.cover_url // empty' ./book-content/payload.json)
+          STYLESHEET_URL=$(jq -r '.book.stylesheet_url // empty' ./book-content/payload.json)
+          TOC_DEPTH=$(jq -r '.options.toc_depth // 2' ./book-content/payload.json)
+          
+          # Download cover image if available
+          if [ -n "$COVER_URL" ]; then
+            echo "Downloading cover image from $COVER_URL"
+            wget -O ./book-content/cover.jpg "$COVER_URL" || echo "Warning: Failed to download cover image"
+          fi
+          
+          # Download stylesheet if available
+          if [ -n "$STYLESHEET_URL" ]; then
+            echo "Downloading stylesheet from $STYLESHEET_URL"
+            mkdir -p ./book-content/styles
+            wget -O ./book-content/styles/epub.css "$STYLESHEET_URL" || echo "Warning: Failed to download stylesheet"
+          fi
+          
+          # Download chapters in parallel
+          echo "Downloading chapters..."
+          jq -r '.book.chapters[] | "\(.order|"\"\(.)\"") \(.url)"' ./book-content/payload.json | \
+            sort -n | cut -d' ' -f2- | \
+            parallel -j 8 --colsep ' ' wget -q --header="Authorization: Bearer $AUTH_TOKEN" -O "./book-content/chapters/chapter-{1}.xhtml" "{2}" || echo "Failed to download chapter {1}"
+          
+          # Download imprint if enabled
+          if [ "$(jq -r '.options.include_imprint // false' ./book-content/payload.json)" = "true" ]; then
+            IMPRINT_URL=$(jq -r '.book.imprint.url // empty' ./book-content/payload.json)
+            if [ -n "$IMPRINT_URL" ]; then
+              echo "Downloading imprint from $IMPRINT_URL"
+              wget --header="Authorization: Bearer $AUTH_TOKEN" -O ./book-content/imprint.xhtml "$IMPRINT_URL" || \
+                echo "Warning: Failed to download imprint"
+            fi
+          fi
+          
+          echo "All content downloaded successfully"
 
-      - name: Download book content
-        run: |
-          mkdir -p ./book-content
-          curl -H "Authorization: Bearer ${{ github.event.inputs.token }}" -L "${{ steps.fetch-book.outputs.download_url }}" -o ./book-content/book.json
-
-      - name: Generate EPUB
+      - name: Generate EPUB with Pandoc
         run: |
           echo "Generating EPUB for ${{ github.event.inputs.slug }}"
-          # Add your EPUB generation command here
-          # Example: node scripts/generate-epub.js ./book-content/book.json
+          mkdir -p ./output
+          
+          # Get options from payload
+          GENERATE_TOC=$(jq -r '.options.generate_toc // true' ./book-content/payload.json)
+          INCLUDE_IMPRINT=$(jq -r '.options.include_imprint // true' ./book-content/payload.json)
+          TOC_DEPTH=$(jq -r '.options.toc_depth // 2' ./book-content/payload.json)
+          
+          # Prepare the list of files to include in the EPUB
+          FILES=()
+          PANDOC_OPTS=()
+          
+          # Add TOC options if enabled
+          if [ "$GENERATE_TOC" = "true" ]; then
+            PANDOC_OPTS+=("--toc" "--toc-depth=$TOC_DEPTH")
+            echo "Including table of contents with depth: $TOC_DEPTH"
+          else
+            echo "Table of contents generation is disabled"
+          fi
+          
+          # Add cover if available and enabled
+          COVER_ENABLED=$(jq -r '.options.cover // true' ./book-content/payload.json)
+          if [ "$COVER_ENABLED" = "true" ] && [ -f "./book-content/cover.jpg" ]; then
+            FILES+=("--epub-cover-image=./book-content/cover.jpg")
+            echo "Including cover image"
+          fi
+          
+          # Add stylesheet if available
+          if [ -f "./book-content/styles/epub.css" ]; then
+            FILES+=("--css=./book-content/styles/epub.css")
+          fi
+          
+          # Add chapters in order
+          for f in $(ls -v ./book-content/chapters/chapter-*.xhtml); do
+            FILES+=("$f")
+          done
+          
+          # Add imprint if enabled and available
+          if [ "$INCLUDE_IMPRINT" = "true" ] && [ -f "./book-content/imprint.xhtml" ]; then
+            FILES+=("./book-content/imprint.xhtml")
+            echo "Including imprint page"
+          elif [ "$INCLUDE_IMPRINT" = "true" ]; then
+            echo "Warning: Imprint was enabled but not found"
+          fi
+          
+          # Get metadata from payload
+          TITLE=$(jq -r '.book.title // "Untitled Book"' ./book-content/payload.json)
+          AUTHOR=$(jq -r '.book.author // "Unknown Author"' ./book-content/payload.json)
+          LANGUAGE=$(jq -r '.book.language // "en"' ./book-content/payload.json)
+          
+          # Generate EPUB using Pandoc
+          echo "Running Pandoc with ${#FILES[@]} files"
+          
+          # Build the full command
+          set -x  # Print commands for debugging
+          pandoc \
+            --from=html \
+            --to=epub3 \
+            --output=./output/book.epub \
+            --epub-chapter-level=1 \
+            --metadata="title:$TITLE" \
+            --metadata="author:$AUTHOR" \
+            --metadata="language:$LANGUAGE" \
+            --metadata="identifier:$BOOK_SLUG" \
+            "${PANDOC_OPTS[@]}" \
+            "${FILES[@]}"
+          
+          # Verify EPUB was created
+          if [ ! -f "./output/book.epub" ]; then
+            echo "Error: Failed to generate EPUB"
+            exit 1
+          fi
+          
+          echo "EPUB generated successfully"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
