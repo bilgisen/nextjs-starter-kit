@@ -3,11 +3,11 @@ name: Build and Publish EPUB
 on:
   workflow_dispatch:
     inputs:
-      book_slug:
+      slug:
         description: 'Book slug'
         required: true
         type: string
-      payload_url:
+      payload:
         description: 'URL to fetch the book payload'
         required: true
         type: string
@@ -41,10 +41,10 @@ jobs:
       - name: Fetch book data
         id: fetch-book
         env:
-          AUTH_TOKEN: ${{ github.token }}
+          AUTH_TOKEN: ${{ github.event.inputs.token }}
         run: |
-          echo "Fetching book data from ${{ github.event.inputs.payload_url }}"
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.token }}" "${{ github.event.inputs.payload_url }}")
+          echo "Fetching book data from ${{ github.event.inputs.payload }}"
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.token }}" "${{ github.event.inputs.payload }}")
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
           
           # Extract the download URL from the response
@@ -62,8 +62,8 @@ jobs:
 
       - name: Generate EPUB
         run: |
-          # Your EPUB generation script here
-          echo "Generating EPUB for ${{ github.event.inputs.book_slug }}"
+          echo "Generating EPUB for ${{ github.event.inputs.slug }}"
+          # Add your EPUB generation command here
           # Example: node scripts/generate-epub.js ./book-content/book.json
 
       - name: Upload artifact
