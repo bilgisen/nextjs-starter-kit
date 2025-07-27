@@ -10,15 +10,11 @@ interface GenerationStatus {
   artifacts?: Array<{ id: string; url: string }>;
 }
 
+import type { PublishOptions } from '@/actions/books/publish/epub-actions/types';
+
 interface PublishEpubButtonProps {
   bookSlug: string;
-  options: {
-    generate_toc: boolean;
-    include_imprint: boolean;
-    toc_depth?: number;
-    embed_metadata: boolean;
-    cover: boolean;
-  };
+  options: Omit<PublishOptions, 'output_format'>;
   className?: string;
   variant?: 'default' | 'outline' | 'ghost' | 'link' | 'secondary';
   size?: 'default' | 'sm' | 'lg' | 'icon';
@@ -45,12 +41,18 @@ export function PublishEpubButton({
     const generationStatus = status as GenerationStatus;
     if (generationStatus?.status === 'completed' && generationStatus.artifacts?.[0]?.id) {
       // If we have a completed status with artifacts, trigger the download
-      await downloadEpub(generationStatus.artifacts[0].id);
+      // Convert artifact ID to number since downloadEpub expects a number
+      const artifactId = Number(generationStatus.artifacts[0].id);
+      if (isNaN(artifactId)) {
+        console.error('Invalid artifact ID:', generationStatus.artifacts[0].id);
+        return;
+      }
+      await downloadEpub(artifactId);
     } else {
       // Otherwise, generate a new EPUB
       await generateEpub({
         ...options,
-        output_format: 'epub' as const
+        output_format: 'epub'
       });
     }
   };

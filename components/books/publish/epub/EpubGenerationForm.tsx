@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { BookOpenText, RefreshCw } from 'lucide-react';
+import Image from 'next/image';
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -250,10 +251,13 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
               <div className="border rounded-md bg-muted/50 p-6 min-h-[400px] flex items-center justify-center">
                 {book.coverImageUrl ? (
                   <div className="relative w-full h-full">
-                    <img
+                    <Image
                       src={book.coverImageUrl}
                       alt={`Cover of ${book.title}`}
                       className="object-contain w-full h-full"
+                      width={400}
+                      height={600}
+                      priority
                     />
                   </div>
                 ) : (

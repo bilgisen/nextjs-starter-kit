@@ -62,7 +62,7 @@ export default function PublishEpubPage({ params }: { params: { slug: string } }
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex flex-col space-y-8">
+      <div className="flex flex-col space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Publish EPUB</h1>

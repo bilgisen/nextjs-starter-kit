@@ -4,9 +4,34 @@ import { books, chapters } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { getSession } from '@/actions/auth/get-session';
 
-interface ChapterWithContent extends Chapter {
+import { format as formatDate } from 'date-fns';
+// Define the Book type with all required properties
+interface Book {
+  id: string;
+  title: string;
+  slug: string;
+  author?: string | null;
+  language?: string | null;
+  cover_image_url?: string | null;
+  coverImageUrl?: string | null;
+  userId?: string | null;
+  [key: string]: unknown; // For any additional properties
+}
+
+
+// Define our extended chapter type with all required fields
+interface ChapterWithContent {
+  id: string;
+  book_id: string;
+  user_id: string;
+  title: string;
   content: string;
-  html_content?: string;
+  html_content: string;
+  parent_chapter_id: string | null;
+  order: number;
+  level: number;
+  created_at: string;
+  updated_at: string;
 }
 
 type Context = {
@@ -34,7 +59,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await Promise.resolve(params);
-    const outputFormat = getOutputFormat(request);
+    const format = getOutputFormat(request);
     
     if (!slug) {
       return NextResponse.json(
@@ -45,6 +70,9 @@ export async function GET(
         { status: 400 }
       );
     }
+    
+    // Ensure format is one of the allowed values
+    const outputFormat: PayloadFormat = (format === 'html' || format === 'markdown') ? format : 'json';
 
     // Check for GitHub Actions authentication
     const isGitHubAction = checkGitHubAuth(request);
@@ -77,7 +105,8 @@ export async function GET(
         return new NextResponse('Book not found', { status: 404 });
       }
       
-      return await generatePayload(book, outputFormat);
+      const payload = await generatePayload(book, outputFormat);
+      return payload;
     }
     
     // For GitHub Actions, bypass ownership check but still validate the book exists
@@ -90,7 +119,8 @@ export async function GET(
       return new NextResponse('Book not found', { status: 404 });
     }
     
-    return await generatePayload(book, outputFormat);
+    const payload = await generatePayload(book, outputFormat);
+    return payload;
 
   } catch (error) {
     console.error('Error generating payload.json:', error);
@@ -106,15 +136,18 @@ export async function GET(
 }
 
 // Helper function to generate chapter HTML
-function generateChapterHTML(chapter: ChapterWithContent, book: Book): string {
+function generateChapterHTML(chapter: ChapterWithContent): string {
   const headingLevel = Math.min(1 + (chapter.level ?? 1), 6);
   const titleTag = `h${headingLevel}`;
   
+  // Ensure we have valid content to display
+  const content = chapter.html_content || chapter.content || '';
+  
   return `
     <section id="chapter-${chapter.id}" class="chapter" data-level="${chapter.level || 1}">
-      <${titleTag} class="chapter-title">${chapter.title}</${titleTag}>
+      <${titleTag} class="chapter-title">${chapter.title || 'Untitled Chapter'}</${titleTag}>
       <div class="chapter-content">
-        ${chapter.html_content || chapter.content}
+        ${content}
       </div>
     </section>
   `;
@@ -125,11 +158,11 @@ function generateFullHTML(book: Book, chapters: ChapterWithContent[]): string {
   const title = book.title || 'Untitled Book';
   const language = book.language || 'en';
   const coverImage = book.cover_image_url || '';
-  const currentDate = format(new Date(), 'yyyy-MM-dd');
+  const currentDate = formatDate(new Date(), 'yyyy-MM-dd');
   
   const chapterHTML = chapters
     .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .map(chapter => generateChapterHTML(chapter, book))
+    .map(chapter => generateChapterHTML(chapter))
     .join('\n\n');
   
   return `<!DOCTYPE html>
@@ -171,57 +204,74 @@ function generateFullHTML(book: Book, chapters: ChapterWithContent[]): string {
 }
 
 // Helper function to generate the payload
-async function generatePayload(book: Book, format: 'json' | 'html' | 'markdown' = 'json') {
+type PayloadFormat = 'json' | 'html' | 'markdown';
+
+// Helper function to safely format dates
+const safeFormatDate = (date: Date | string | null | undefined, formatStr: string): string => {
+  if (!date) return formatDate(new Date(), formatStr);
+  const dateObj = date instanceof Date ? date : new Date(date);
+  return isNaN(dateObj.getTime()) ? formatDate(new Date(), formatStr) : formatDate(dateObj, formatStr);
+};
+
+async function generatePayload(book: Book, format: PayloadFormat = 'json' as const): Promise<NextResponse> {
   try {
     // Get chapters with content
     const dbChapters = await db
       .select()
       .from(chapters)
-      .where(eq(chapters.bookId, book.id))
+      .where(eq(chapters.book_id, book.id))
       .orderBy(asc(chapters.order));
     
-    // Transform chapters to include content
-    const chaptersWithContent: ChapterWithContent[] = dbChapters.map(chapter => ({
-      ...chapter,
-      content: chapter.content || '',
-      html_content: chapter.html_content || ''
-    }));
+    // Transform database chapters to our ChapterWithContent type
+    const chaptersWithContent: ChapterWithContent[] = dbChapters.map((chapter) => {
+      // Map the database chapter to our ChapterWithContent type
+      return {
+        id: chapter.id,
+        book_id: chapter.book_id,
+        user_id: 'unknown', // Not available in the database, using default
+        title: chapter.title,
+        content: chapter.content,
+        html_content: chapter.content, // Using content as html_content since it's not in the schema
+        parent_chapter_id: chapter.parent_chapter_id,
+        order: chapter.order,
+        level: chapter.level,
+        created_at: safeFormatDate(chapter.created_at, 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\''),
+        updated_at: safeFormatDate(chapter.updated_at, 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
+      };
+    });
     
-    // Generate metadata
+    // Generate metadata with proper typing
     const metadata = {
       title: book.title,
       language: book.language || 'tr',
       creator: book.author || 'Unknown Author',
-      publisher: 'Turna',
-      date: format(new Date(), 'yyyy-MM-dd'),
+      publisher: 'Turna' as const,
+      date: formatDate(new Date(), 'yyyy'),
       identifier: book.slug,
       cover: book.cover_image_url || null,
-    };
+    } as const;
 
     // Generate the payload based on format
     switch (format) {
       case 'html': {
         const htmlContent = generateFullHTML(book, chaptersWithContent);
         return new NextResponse(htmlContent, {
-          headers: { 'Content-Type': 'text/html' },
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
         });
       }
       
       case 'markdown': {
-        // Convert HTML to Markdown (simplified for brevity)
-        let markdown = `# ${book.title}\n\n`;
-        markdown += `**Author:** ${book.author || 'Unknown'}\n\n`;
-        markdown += `**Language:** ${book.language || 'tr'}\n\n`;
+        // For markdown, we'll return the raw content of all chapters concatenated
+        const markdownContent = chaptersWithContent
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .map(chapter => {
+            const heading = '#'.repeat(Math.min(6, 1 + (chapter.level || 0)));
+            return `${heading} ${chapter.title}\n\n${chapter.content || ''}`;
+          })
+          .join('\n\n---\n\n');
         
-        // Add chapters
-        chaptersWithContent.forEach(chapter => {
-          const heading = '#'.repeat(Math.min(2, (chapter.level || 1) + 1));
-          markdown += `\n${heading} ${chapter.title}\n\n`;
-          markdown += `${chapter.content}\n\n`;
-        });
-        
-        return new NextResponse(markdown, {
-          headers: { 'Content-Type': 'text/markdown' },
+        return new NextResponse(markdownContent, {
+          headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
         });
       }
       
@@ -229,15 +279,7 @@ async function generatePayload(book: Book, format: 'json' | 'html' | 'markdown' 
       default: {
         const payload = {
           metadata,
-          chapters: chaptersWithContent.map(chapter => ({
-            id: chapter.id,
-            title: chapter.title,
-            content: chapter.content,
-            html_content: chapter.html_content,
-            order: chapter.order,
-            level: chapter.level,
-            parent_chapter_id: chapter.parent_chapter_id,
-          })),
+          chapters: chaptersWithContent,
           options: {
             generate_toc: true,
             include_imprint: true,
@@ -247,8 +289,8 @@ async function generatePayload(book: Book, format: 'json' | 'html' | 'markdown' 
           },
         };
         
-        return new NextResponse(JSON.stringify(payload, null, 2), {
-          headers: { 'Content-Type': 'application/json' },
+        return NextResponse.json(payload, {
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
         });
       }
     }
