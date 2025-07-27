@@ -268,6 +268,22 @@ export async function POST(
       );
     }
 
+    // Prepare the workflow dispatch payload
+    const workflowInputs = {
+      slug,
+      payload: JSON.stringify(payload),
+      token: process.env.NEXT_EPUB_SECRET
+    };
+
+    console.log('Dispatching workflow with inputs:', {
+      repo: REPO,
+      workflow: WORKFLOW,
+      inputs: {
+        ...workflowInputs,
+        token: workflowInputs.token ? '***TOKEN PRESENT***' : '***MISSING TOKEN***'
+      }
+    });
+
     // Trigger GitHub Actions workflow
     const url = `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`;
     const response = await fetch(url, {
@@ -280,11 +296,7 @@ export async function POST(
       },
       body: JSON.stringify({
         ref: 'main',
-        inputs: {
-          slug,
-          payload: JSON.stringify(payload),
-          token: process.env.NEXT_EPUB_SECRET, // Add the required token input
-        },
+        inputs: workflowInputs,
       }),
     });
 
