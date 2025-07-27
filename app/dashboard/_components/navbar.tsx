@@ -21,7 +21,7 @@ export default function DashboardTopNav({ children, locale, setLocale }: Props) 
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/dashboard" className="flex items-center space-x-2">
-              <span className="font-bold text-lg">Pixpubli</span>
+              <span className="font-bold text-lg">Booksleek</span>
             </Link>
           </div>
 

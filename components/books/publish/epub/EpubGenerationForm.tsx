@@ -76,7 +76,7 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
 
   return (
     <div className={cn('space-y-6', className)}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Options Card */}
         <div className="lg:col-span-1">
           <Card>
@@ -250,20 +250,24 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
             <CardContent>
               <div className="border rounded-md bg-muted/50 p-6 min-h-[400px] flex items-center justify-center">
                 {book.coverImageUrl ? (
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={book.coverImageUrl}
-                      alt={`Cover of ${book.title}`}
-                      className="object-contain w-full h-full"
-                      width={400}
-                      height={600}
-                      priority
-                    />
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="relative w-64 h-96">
+                      <Image
+                        src={book.coverImageUrl}
+                        alt={`Cover of ${book.title}`}
+                        className="object-contain rounded-md shadow-md"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        priority
+                        unoptimized={book.coverImageUrl.startsWith('blob:')}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center space-y-2 text-muted-foreground">
                     <BookOpenText className="mx-auto h-12 w-12" />
                     <p>No cover image available</p>
+                    <p className="text-xs">Upload a cover in the Book Settings</p>
                   </div>
                 )}
               </div>

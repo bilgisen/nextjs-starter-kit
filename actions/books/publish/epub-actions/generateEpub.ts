@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getSession } from '@/actions/auth/get-session';
 import { PublishOptions, GenerationResponse } from './types';
-import { getAuthHeaders, getApiUrl, handleApiResponse } from './utils';
+import { getAuthHeaders, getApiUrl } from './utils';
 
 export async function generateEpub(
   bookSlug: string,
@@ -27,10 +27,23 @@ export async function generateEpub(
       body: JSON.stringify(payload),
     });
 
-    const result = await handleApiResponse<GenerationResponse>(response);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.error || 
+        errorData.message || 
+        `Request failed with status ${response.status}`
+      );
+    }
+
+    const result = await response.json() as GenerationResponse;
     
     // Revalidate any relevant paths
     revalidatePath(`/dashboard/books/${bookSlug}/publish`);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to generate EPUB');
+    }
     
     return result;
   } catch (error) {

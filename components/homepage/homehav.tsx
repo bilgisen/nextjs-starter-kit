@@ -15,7 +15,7 @@ export default function TopNav({ children, locale, setLocale }: Props) {
     <div className="flex flex-col">
       <header className="flex h-14 items-center justify-between border-b px-2">
         {/* Sol: Site adı */}
-        <div className="text-lg font-semibold tracking-tight">BookNorm</div>
+        <div className="text-lg font-semibold tracking-tight">Booksleek</div>
 
         {/* Sağ: Dil ve tema switcher */}
         <div className="flex items-center gap-2">

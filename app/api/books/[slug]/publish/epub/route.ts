@@ -350,7 +350,7 @@ export async function POST(
   }
 }
 
-// New GET endpoint to serve the payload.json file
+// GET endpoint to serve the payload.json file for GitHub Actions
 export async function GET(
   request: Request,
   { params }: { params: { slug: string } }
@@ -363,29 +363,37 @@ export async function GET(
   }
 
   try {
+    // Get the response from handleEpubGeneration
     const response = await handleEpubGeneration(request, { params });
-    const json = await response.json();
     
-    if (!json.success) {
-      return NextResponse.json(
-        { error: json.error || 'Failed to generate payload' },
-        { status: 500 }
-      );
+    // If the response is not ok, return the error response directly
+    if (!response.ok) {
+      return response;
     }
 
-    // Set headers for file download
-    const headers = new Headers();
-    headers.set('Content-Type', 'application/json');
-    headers.set('Content-Disposition', `attachment; filename="${params.slug}-payload.json"`);
-    
-    return new NextResponse(JSON.stringify(json.data, null, 2), {
-      headers,
+    // Get the JSON data from the response
+    const data = await response.json();
+
+    // Return the response with appropriate headers for file download
+    return new NextResponse(JSON.stringify(data, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="${params.slug}-payload.json"`,
+      },
     });
   } catch (error) {
     console.error('Error serving payload.json:', error);
     return new NextResponse(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: false, 
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'An unknown error occurred'
+      }),
+      { 
+        status: 500, 
+        headers: { 'Content-Type': 'application/json' } 
+      }
     );
   }
 }
