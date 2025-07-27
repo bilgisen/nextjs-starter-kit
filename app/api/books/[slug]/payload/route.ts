@@ -3,9 +3,6 @@ import { db } from '@/db/drizzle';
 import { books, chapters } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { getSession } from '@/actions/auth/get-session';
-import { getChaptersByBook } from '@/actions/books/get-chapters-by-book';
-import { format } from 'date-fns';
-import { Book, Chapter } from '@/types/book';
 
 interface ChapterWithContent extends Chapter {
   content: string;
