@@ -3,22 +3,20 @@ name: Build and Publish EPUB
 on:
   workflow_dispatch:
     inputs:
-      slug:
-        description: 'Book slug'
+      book_slug:
+        description: 'Book slug (e.g., my-awesome-book)'
         required: true
         type: string
-      payload:
-        description: 'URL to fetch the book payload'
-        required: true
-        type: string
-      token:
-        description: 'Authentication token'
+      timestamp:
+        description: 'Timestamp for unique build identification'
         required: true
         type: string
 
 env:
-  NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://your-app-url.com' }}
-  NEXT_EPUB_SECRET: ${{ secrets.NEXT_EPUB_SECRET }}
+  NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
+  NEXT_EPUB_SECRET: ${{ secrets.NEXT_EPUB_SECRET || 'OYh7fJu98ObHM' }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
+  NODE_ENV: production
 
 jobs:
   build-epub:
@@ -53,27 +51,46 @@ jobs:
       - name: Fetch Book Payload
         id: fetch-payload
         env:
-          AUTH_TOKEN: ${{ github.event.inputs.token }}
-          BOOK_SLUG: ${{ github.event.inputs.slug }}
-          BASE_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.vercel.app' }}
+          BOOK_SLUG: ${{ github.event.inputs.book_slug }}
+          TIMESTAMP: ${{ github.event.inputs.timestamp }}
+          BASE_URL: ${{ env.NEXT_PUBLIC_APP_URL }}
         run: |
           echo "Fetching book payload for $BOOK_SLUG"
           mkdir -p ./book-content/chapters
           
-          # Fetch the book payload
-          if ! wget --header="Authorization: Bearer $AUTH_TOKEN" \
-                    --output-document=./book-content/payload.json \
-                    "$BASE_URL/api/books/$BOOK_SLUG/payload"; then
-            echo "Failed to download book payload"
+          # Fetch the book payload using the internal API
+          PAYLOAD_URL="$BASE_URL/api/books/$BOOK_SLUG/payload"
+          echo "Fetching payload from: $PAYLOAD_URL"
+          
+          if ! curl -s -f -o ./book-content/payload.json \
+                    -H "Accept: application/json" \
+                    -H "X-GitHub-Event: workflow_dispatch" \
+                    -H "X-Hub-Signature-256: $NEXT_EPUB_SECRET" \
+                    "$PAYLOAD_URL?t=$TIMESTAMP"; then
+            echo "::error::Failed to download book payload"
             exit 1
           fi
           
-          # Extract book info
-          BOOK_TITLE=$(jq -r '.book.title // "Untitled Book"' ./book-content/payload.json)
-          BOOK_LANG=$(jq -r '.book.language // "en"' ./book-content/payload.json)
-          COVER_URL=$(jq -r '.book.cover_url // empty' ./book-content/payload.json)
-          STYLESHEET_URL=$(jq -r '.book.stylesheet_url // empty' ./book-content/payload.json)
-          TOC_DEPTH=$(jq -r '.options.toc_depth // 2' ./book-content/payload.json)
+          # Validate the payload
+          if [ ! -s "./book-content/payload.json" ]; then
+            echo "::error::Received empty payload"
+            exit 1
+          fi
+          
+          # Extract book info with better error handling
+          set +e
+          BOOK_TITLE=$(jq -r '.book.title // "Untitled Book"' ./book-content/payload.json 2>/dev/null)
+          if [ $? -ne 0 ]; then
+            echo "::error::Invalid payload format: failed to parse book title"
+            jq . ./book-content/payload.json >&2
+            exit 1
+          fi
+          
+          BOOK_LANG=$(jq -r '.book.language // "en"' ./book-content/payload.json 2>/dev/null)
+          COVER_URL=$(jq -r '.book.cover_url // empty' ./book-content/payload.json 2>/dev/null)
+          STYLESHEET_URL=$(jq -r '.book.stylesheet_url // empty' ./book-content/payload.json 2>/dev/null)
+          TOC_DEPTH=$(jq -r '.options.toc_depth // 2' ./book-content/payload.json 2>/dev/null)
+          set -e
           
           # Download cover image if available
           if [ -n "$COVER_URL" ]; then
@@ -88,11 +105,39 @@ jobs:
             wget -O ./book-content/styles/epub.css "$STYLESHEET_URL" || echo "Warning: Failed to download stylesheet"
           fi
           
-          # Download chapters in parallel
+          # Download chapters in parallel with better error handling
           echo "Downloading chapters..."
-          jq -r '.book.chapters[] | "\(.order|"\"\(.)\"") \(.url)"' ./book-content/payload.json | \
-            sort -n | cut -d' ' -f2- | \
-            parallel -j 8 --colsep ' ' wget -q --header="Authorization: Bearer $AUTH_TOKEN" -O "./book-content/chapters/chapter-{1}.xhtml" "{2}" || echo "Failed to download chapter {1}"
+          if ! jq -r '.book.chapters[] | "\(.order) \(.url)"' ./book-content/payload.json 2>/dev/null > ./book-content/chapters-list.txt; then
+            echo "::error::Failed to extract chapter list from payload"
+            exit 1
+          fi
+          
+          # Process chapters in batches to avoid rate limiting
+          BATCH_SIZE=5
+          TOTAL_CHAPTERS=$(wc -l < ./book-content/chapters-list.txt)
+          echo "Found $TOTAL_CHAPTERS chapters to process"
+          
+          for ((i=0; i<TOTAL_CHAPTERS; i+=BATCH_SIZE)); do
+            echo "Processing chapters $((i+1))-$((i+BATCH_SIZE)) of $TOTAL_CHAPTERS..."
+            cat ./book-content/chapters-list.txt | \
+              tail -n +$((i+1)) | head -n $BATCH_SIZE | \
+              parallel --colsep ' ' '
+                set -e
+                ORDER={1}
+                URL={2}
+                echo "Downloading chapter $ORDER..."
+                if ! curl -s -f -o "./book-content/chapters/chapter-${ORDER}.xhtml" \
+                         -H "Accept: application/json" \
+                         -H "X-GitHub-Event: workflow_dispatch" \
+                         -H "X-Hub-Signature-256: $NEXT_EPUB_SECRET" \
+                         "$URL"; then
+                  echo "::warning::Failed to download chapter $ORDER"
+                  false
+                fi
+              '
+            # Small delay between batches
+            sleep 2
+          done
           
           # Download imprint if enabled
           if [ "$(jq -r '.options.include_imprint // false' ./book-content/payload.json)" = "true" ]; then

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 // UI Components
 import { BooksMenu } from '@/components/books/books-menu';
@@ -12,43 +13,37 @@ import { Separator } from '@/components/ui/separator';
 // Custom Components
 import { EpubGenerationForm } from '@/components/books/publish/epub/EpubGenerationForm';
 
-export default function PublishEpubPage({ params }: { params: { slug: string } }) {
+export default function PublishEpubPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const router = useRouter();
-  const { slug } = params;
-  
-  // State
-  const [book, setBook] = useState<Book | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Load book data
-  useEffect(() => {
-    if (!slug) {
-      router.push('/dashboard/books');
-      return;
-    }
-
-    const loadBookData = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch(`/api/books/${slug}`);
-        if (!response.ok) {
-          throw new Error('Failed to load book data');
-        }
-        const bookData = await response.json();
-        setBook(bookData);
-      } catch (err) {
-        console.error('Error loading book:', err);
-        toast.error('Failed to load book data');
-      } finally {
-        setIsLoading(false);
+  // Fetch book data using TanStack Query
+  const { data: response, isLoading, error } = useQuery({
+    queryKey: ['book', slug],
+    queryFn: async () => {
+      if (!slug) {
+        router.push('/dashboard/books');
+        throw new Error('No book slug provided');
       }
-    };
+      
+      console.log('Fetching book data for slug:', slug);
+      const response = await fetch(`/api/books/${slug}`);
+      if (!response.ok) {
+        console.error('Failed to fetch book data:', response.status, response.statusText);
+        throw new Error('Failed to load book data');
+      }
+      const data = await response.json();
+      console.log('Received book data:', data);
+      return data;
+    },
+    enabled: !!slug,
+  });
 
-    loadBookData();
-  }, [slug, router]);
+  // Extract book data from response
+  const book = response?.data;
 
-  // Show loading state
-  if (isLoading || !book) {
+  // Handle loading and error states
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -57,8 +52,19 @@ export default function PublishEpubPage({ params }: { params: { slug: string } }
     );
   }
 
+  if (error) {
+    toast.error('Failed to load book data');
+    router.push('/dashboard/books');
+    return null;
+  }
+
+  if (!book) {
+    router.push('/dashboard/books');
+    return null;
+  }
+
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-8">
       <div className="flex flex-col space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -75,9 +81,21 @@ export default function PublishEpubPage({ params }: { params: { slug: string } }
         <EpubGenerationForm 
           bookSlug={slug}
           book={{
+            id: book.id,
             title: book.title,
-            coverImageUrl: book.coverImageUrl || book.cover_image_url,
-            userId: book.userId || book.user_id
+            slug: book.slug,
+            author: book.author || 'Unknown Author',
+            publisher: book.publisher || 'Unknown Publisher',
+            description: book.description || undefined,
+            isbn: book.isbn || undefined,
+            publish_year: book.publish_year || undefined,
+            language: book.language || undefined,
+            cover_image_url: book.coverImageUrl || book.cover_image_url || undefined,
+            userId: book.userId || book.user_id,
+            created_at: book.created_at || book.createdAt || new Date().toISOString(),
+            updated_at: book.updated_at || book.updatedAt || new Date().toISOString(),
+            user_id: book.user_id || book.userId,
+            coverImage: book.coverImage || book.cover_image_url || book.coverImageUrl || undefined
           }}
         />
       </div>

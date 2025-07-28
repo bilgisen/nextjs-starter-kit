@@ -1,17 +1,8 @@
-import { getSession } from '@/actions/auth/get-session';
-
-export async function getAuthHeaders() {
-  const session = await getSession();
-  if (!session?.user) {
-    throw new Error('Not authenticated');
-  }
-  
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${process.env.NEXT_EPUB_SECRET || ''}`
-  };
-}
-
+/**
+ * Constructs a full API URL from a path
+ * @param path The API endpoint path
+ * @returns The full URL
+ */
 export function getApiUrl(path: string) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   return `${baseUrl}${path}`;

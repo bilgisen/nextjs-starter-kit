@@ -2,7 +2,7 @@
 
 import { getSession } from '@/actions/auth/get-session';
 import { DownloadResult } from './types';
-import { getAuthHeaders, getApiUrl, handleApiResponse } from './utils';
+import { getApiUrl } from './utils';
 
 export async function downloadEpub(
   bookSlug: string,
@@ -17,7 +17,10 @@ export async function downloadEpub(
   
   try {
     const response = await fetch(url, {
-      headers: await getAuthHeaders()
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NEXT_EPUB_SECRET}`
+      }
     });
 
     if (!response.ok) {

@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { BookOpenText, RefreshCw } from 'lucide-react';
-import Image from 'next/image';
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+// Book Components
+import { SingleBookView } from '@/components/books/single-book-view';
 
 // Custom Components
 import { PublishEpubButton } from './PublishEpubButton';
@@ -20,17 +20,21 @@ import { ImprintPreview } from './ImprintPreview';
 // Hooks
 import { useEpubGeneration } from '@/queries/books/useEpubGeneration';
 
+import type { Book } from '@/types/book';
+
 interface EpubGenerationFormProps {
   bookSlug: string;
-  book: {
-    title: string;
+  book: Book & {
     coverImageUrl?: string | null;
-    userId: string;
   };
   className?: string;
 }
 
-export function EpubGenerationForm({ bookSlug, book, className }: EpubGenerationFormProps) {
+export function EpubGenerationForm({ bookSlug, book: propBook, className }: EpubGenerationFormProps) {
+  // Log book data for debugging
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    console.log('Book data in EpubGenerationForm:', propBook);
+  }
   // EPUB Generation Hook
   const {
     generateEpub,
@@ -46,44 +50,94 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
     toc_depth: 3,
     output_format: 'epub' as const,
     embed_metadata: true,
-    cover: !!book.coverImageUrl,
+    // Use the cover image URL if available, otherwise use an empty string
+    cover: propBook.coverImageUrl || propBook.cover_image_url || propBook.coverImage || '',
   });
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prepare the options object with all required fields
+    const submissionOptions = {
+      generate_toc: Boolean(options.generate_toc),
+      include_imprint: Boolean(options.include_imprint),
+      toc_depth: Number(options.toc_depth) || 3,
+      output_format: 'epub' as const,
+      embed_metadata: Boolean(options.embed_metadata),
+      cover: Boolean(options.cover), // Convert to boolean as expected by the type
+      // Include metadata directly in the options
+      metadata: {
+        title: propBook.title,
+        author: propBook.author,
+        language: propBook.language || 'en',
+      },
+    };
+
+    console.log('Submitting EPUB generation with options:', JSON.stringify(submissionOptions, null, 2));
+    
     try {
-      await generateEpub(options);
+      await generateEpub(submissionOptions);
     } catch (err) {
       console.error('Generation error:', err);
       toast.error('Failed to start EPUB generation');
     }
   };
 
-  // Handle reset
-  const handleReset = () => {
-    // Reset the form state
-    setOptions({
-      generate_toc: true,
-      include_imprint: true,
-      toc_depth: 3,
-      output_format: 'epub',
-      embed_metadata: true,
-      cover: !!book.coverImageUrl,
-    });
-  };
+  // Handle reset functionality has been removed as it's no longer used in the UI
 
   return (
     <div className={cn('space-y-6', className)}>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Options Card */}
+      {/* Top Section: Book Info and EPUB Options */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Book Info (2/3) */}
+        <div className="lg:col-span-2">
+
+              <SingleBookView 
+                book={{
+                  id: propBook.id,
+                  userId: propBook.user_id || propBook.userId || '',
+                  user_id: propBook.user_id || propBook.userId || '',
+                  title: propBook.title || '',
+                  slug: propBook.slug || '',
+                  author: propBook.author || '',
+                  publisher: propBook.publisher || '',
+                  description: propBook.description || null,
+                  isbn: propBook.isbn || null,
+                  publish_year: propBook.publish_year || null,
+                  language: propBook.language || null,
+                  cover_image_url: propBook.coverImageUrl || propBook.cover_image_url || propBook.coverImage || null,
+                  created_at: propBook.created_at || new Date().toISOString(),
+                  updated_at: propBook.updated_at || new Date().toISOString()
+                }} 
+              />
+          <br/>
+
+              {options.include_imprint ? (
+                <div className="prose max-w-none">
+                  <ImprintPreview 
+                    includeImprint={options.include_imprint}
+                    onIncludeImprintChange={(include) =>
+                      setOptions({ ...options, include_imprint: include })
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Imprint preview is disabled</p>
+                  <p className="text-sm">Enable the imprint option to see the preview</p>
+                </div>
+              )}
+
+        </div>
+
+        {/* Right Column: EPUB Options (1/3) */}
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle>EPUB Options</CardTitle>
               <CardDescription>
-                Customize how your EPUB will be generated
+                Customize your EPUB settings
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -181,25 +235,25 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
                       </p>
                     </div>
                   </div>
-
                   <div className="flex items-start space-x-2 pt-2">
                     <Checkbox
                       id="cover"
-                      checked={options.cover}
-                      onCheckedChange={(checked) =>
+                      checked={!!options.cover}
+                      onCheckedChange={(checked) => {
+                        const hasCover = propBook.coverImageUrl || propBook.cover_image_url || propBook.coverImage;
                         setOptions({
                           ...options,
-                          cover: checked === true,
-                        })
-                      }
-                      disabled={status === 'generating' || !book.coverImageUrl}
+                          cover: checked && hasCover ? (propBook.coverImageUrl || propBook.cover_image_url || propBook.coverImage || '') : '',
+                        });
+                      }}
+                      disabled={status === 'generating' || !(propBook.coverImageUrl || propBook.cover_image_url || propBook.coverImage)}
                     />
                     <div className="grid gap-1.5 leading-none">
                       <Label htmlFor="cover" className="font-medium">
                         Include Cover Image
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        {book.coverImageUrl
+                        {(propBook.coverImageUrl || propBook.cover_image_url || propBook.coverImage)
                           ? 'Use the uploaded cover image'
                           : 'No cover image available. Upload a cover in the Book Settings.'}
                       </p>
@@ -209,7 +263,7 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
 
                 <div className="space-y-2">
                   <PublishEpubButton
-                    bookSlug={bookSlug}
+                    bookSlug={propBook.slug}
                     options={options}
                     className="w-full"
                   />
@@ -217,64 +271,6 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
               </form>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Preview & Status */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Book Preview */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Book Preview</CardTitle>
-                  <CardDescription>{book.title}</CardDescription>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReset}
-                    disabled={isGenerating}
-                  >
-                    <RefreshCw
-                      className={cn(
-                        'mr-2 h-4 w-4',
-                        isGenerating && 'animate-spin'
-                      )}
-                    />
-                    Reset
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-md bg-muted/50 p-6 min-h-[400px] flex items-center justify-center">
-                {book.coverImageUrl ? (
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    <div className="relative w-64 h-96">
-                      <Image
-                        src={book.coverImageUrl}
-                        alt={`Cover of ${book.title}`}
-                        className="object-contain rounded-md shadow-md"
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        priority
-                        unoptimized={book.coverImageUrl.startsWith('blob:')}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center space-y-2 text-muted-foreground">
-                    <BookOpenText className="mx-auto h-12 w-12" />
-                    <p>No cover image available</p>
-                    <p className="text-xs">Upload a cover in the Book Settings</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Generation Status */}
           <EpubGenerationStatus
             status={isGenerating ? 'generating' : error ? 'error' : 'idle'}
             progress={isGenerating ? 50 : 100}
@@ -284,4 +280,4 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
       </div>
     </div>
   );
-}
+};

@@ -1,12 +1,10 @@
-import type { Book } from '@/types/book';
-
 export interface PublishOptions {
   generate_toc: boolean;
   include_imprint: boolean;
   toc_depth?: number;
   output_format: 'epub';
   embed_metadata: boolean;
-  cover: boolean;
+  cover: boolean | string; // Can be boolean or string (for form data)
 }
 
 export interface GenerationResponse {
@@ -19,7 +17,7 @@ export interface GenerationResponse {
     html_url: string;
   };
   error?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface GenerationStatus {
