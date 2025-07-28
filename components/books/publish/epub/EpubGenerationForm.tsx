@@ -282,18 +282,6 @@ export function EpubGenerationForm({ bookSlug, book, className }: EpubGeneration
           />
         </div>
       </div>
-
-      {/* Imprint Preview */}
-      {options.include_imprint && (
-        <div className="mt-6">
-          <ImprintPreview
-            includeImprint={options.include_imprint}
-            onIncludeImprintChange={(include) =>
-              setOptions({ ...options, include_imprint: include })
-            }
-          />
-        </div>
-      )}
     </div>
   );
 }

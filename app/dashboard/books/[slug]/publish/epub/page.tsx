@@ -9,9 +9,6 @@ import { Loader2 } from 'lucide-react';
 import { BooksMenu } from '@/components/books/books-menu';
 import { Separator } from '@/components/ui/separator';
 
-// Types
-import type { Book } from '@/types/book';
-
 // Custom Components
 import { EpubGenerationForm } from '@/components/books/publish/epub/EpubGenerationForm';
 
