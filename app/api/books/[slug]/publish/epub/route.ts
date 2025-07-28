@@ -1,10 +1,10 @@
 // app/api/books/[slug]/publish/epub/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/actions/auth/get-session';
 import { z } from 'zod';
 import { getBookBySlug } from '@/actions/books/get-book-by-slug';
 import { isGitHubActionRequest, validateGitHubActionRequest } from '@/lib/github-actions';
 import { triggerGitHubWorkflow } from '@/lib/github-workflow';
+import { getSession } from '@/actions/auth/get-session';
 
 // Enhanced logging helper
 async function logRequestInfo(request: NextRequest, slug: string) {
@@ -54,10 +54,11 @@ const epubOptionsSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  context: { params: { slug: string } }
+  context: { params: { slug?: string } }
 ) {
   try {
-    const { slug } = context.params;
+    const params = await context.params;
+    const slug = params?.slug;
     
     if (!slug || typeof slug !== 'string') {
       return NextResponse.json(
@@ -110,12 +111,35 @@ export async function POST(
           );
         }
       } else {
-        // For regular requests, check for a valid session using Better Auth
-        const session = await getSession();
-        if (!session?.user) {
-          console.error('No valid session found');
+        // For regular requests, validate the token
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          console.error('No authorization token found');
           return NextResponse.json(
             { success: false, error: 'Authentication required' },
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Get the session using the working getSession function
+        console.log('Validating session with getSession function...');
+        let validatedSession: { user: { id: string } } | null = null;
+        
+        try {
+          const session = await getSession(request);
+          console.log('Session validation result:', session);
+          
+          if (!session?.user) {
+            console.error('No valid session found');
+            throw new Error('Invalid session');
+          }
+          
+          // Store the session in a variable that's accessible in the outer scope
+          validatedSession = session as { user: { id: string } };
+        } catch (error) {
+          console.error('Error validating session:', error);
+          return NextResponse.json(
+            { success: false, error: 'Invalid or expired session' },
             { status: 401, headers: { 'Content-Type': 'application/json' } }
           );
         }
@@ -130,7 +154,7 @@ export async function POST(
           );
         }
         
-        if (book.userId !== session.user.id) {
+        if (!validatedSession || book.userId !== validatedSession.user.id) {
           console.error('User does not have permission to publish this book');
           return NextResponse.json(
             { success: false, error: 'Unauthorized' },
@@ -217,15 +241,70 @@ export async function POST(
 // GET endpoint to serve the payload.json file for GitHub Actions
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  context: { params: { slug?: string } }
 ) {
   try {
-    console.log('GET request received for slug:', params.slug);
+    const params = await context.params;
+    const slug = params?.slug;
     
-    if (!params.slug) {
+    if (!slug || typeof slug !== 'string') {
       return NextResponse.json(
-        { success: false, error: 'Book slug is required' },
+        { success: false, error: 'Invalid slug' },
         { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Check for a valid session using Better Auth
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('No authorization token found');
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Get the session using the working getSession function
+    console.log('Validating session with getSession function (GET)...');
+    let validatedSession: { user: { id: string } } | null = null;
+    
+    try {
+      const session = await getSession(request);
+      console.log('GET Session validation result:', session);
+      
+      if (!session?.user) {
+        console.error('No valid session found (GET)');
+        throw new Error('Invalid session');
+      }
+      
+      // Store the session in a variable that's accessible in the outer scope
+      validatedSession = session as { user: { id: string } };
+    } catch (error) {
+      console.error('Error validating session:', error);
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired session' },
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // This check is already done in the try-catch block above
+    // The session is guaranteed to have a user at this point
+    
+    // Verify the user has access to this book
+    const book = await getBookBySlug(slug);
+    if (!book) {
+      console.error('Book not found');
+      return NextResponse.json(
+        { success: false, error: 'Book not found' },
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (!validatedSession || book.userId !== validatedSession.user.id) {
+      console.error('User does not have permission to publish this book');
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
     

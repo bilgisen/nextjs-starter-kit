@@ -20,7 +20,7 @@ const FormatCard = ({ title, description, icon, onClick }: FormatCardProps) => (
   >
     <CardHeader className="pb-2">
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+        <div className="p-2 rounded-lg bg-primary/20 text-primary">
           {icon}
         </div>
         <CardTitle className="text-lg">{title}</CardTitle>

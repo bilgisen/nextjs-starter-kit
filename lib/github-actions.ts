@@ -7,7 +7,7 @@ import { headers } from 'next/headers';
  */
 export async function isGitHubActionRequest(): Promise<boolean> {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const userAgent = headersList.get('user-agent') || '';
     return userAgent.includes('GitHub-Hookshot');
   } catch (error) {
