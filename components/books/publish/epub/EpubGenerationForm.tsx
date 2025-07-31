@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 // UI Components
@@ -20,34 +20,126 @@ import { ImprintPreview } from './ImprintPreview';
 // Hooks
 import { useEpubGeneration } from '@/queries/books/useEpubGeneration';
 
+// Types
 import type { Book } from '@/types/book';
+
+// Extended book type that includes all fields from Book plus additional variations
+type BookWithCover = Omit<Book, 'cover_image_url' | 'user_id' | 'created_at' | 'updated_at'> & {
+  // Required fields from Book
+  id: string;
+  userId: string;
+  title: string;
+  slug: string;
+  author: string;
+  publisher: string;
+  
+  // Optional fields from Book
+  description?: string | null;
+  isbn?: string | null;
+  publish_year?: number | null;
+  language?: string | null;
+  
+  // Cover image fields (all variations)
+  coverImageUrl?: string | null;
+  coverImage?: string | null;
+  cover_image_url?: string | null;
+  
+  // Database metadata fields (both variations)
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  
+  // Additional fields that might be present
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type GenerationSuccessData = {
+  id: string;
+  url: string;
+  format: string;
+  size: number;
+  timestamp: string;
+};
+
+export interface EpubGenerationOptions {
+  generate_toc: boolean;
+  include_imprint: boolean;
+  toc_depth: number;
+  custom_css?: string;
+  page_breaks: boolean;
+  include_cover: boolean;
+  output_format: 'epub' | 'pdf' | 'mobi';
+  embed_metadata: boolean;
+  cover?: string;
+  custom_title?: string;
+  custom_author?: string;
+  custom_isbn?: string;
+  custom_publisher?: string;
+  custom_published_date?: string;
+  custom_language?: string;
+  custom_description?: string;
+  custom_cover_image_url?: string;
+  custom_css_url?: string;
+}
 
 interface EpubGenerationFormProps {
   bookSlug: string;
-  book: Book & {
-    coverImageUrl?: string | null;
-  };
+  book: BookWithCover;
   className?: string;
+  onSuccess?: (data: GenerationSuccessData) => void;
+  onError?: (error: Error) => void;
 }
 
-export function EpubGenerationForm({ bookSlug, book: propBook, className }: EpubGenerationFormProps) {
-  // Log book data for debugging
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    console.log('Book data in EpubGenerationForm:', propBook);
-  }
-  // EPUB Generation Hook
+export function EpubGenerationForm({ 
+  bookSlug, 
+  book: propBook, 
+  className, 
+  onSuccess,
+  onError
+}: EpubGenerationFormProps) {
+  // EPUB Generation Hook - moved to the top to ensure variables are declared before use
   const {
     generateEpub,
     status,
     isGenerating,
-    error,
+    error: generationError,
   } = useEpubGeneration(bookSlug);
 
+  // Log book data for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      console.log('Book data in EpubGenerationForm:', propBook);
+    }
+  }, [propBook]);
+
+  // Handle generation success and errors
+  useEffect(() => {
+    if (status === 'success' && onSuccess) {
+      onSuccess({
+        id: `epub-${Date.now()}`,
+        url: `/api/books/${bookSlug}/download?format=epub`,
+        format: 'epub',
+        size: 0, // This would be updated with actual file size after generation
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }, [status, bookSlug, onSuccess]);
+
+  // Handle errors separately to avoid unnecessary re-renders
+  useEffect(() => {
+    if (generationError && onError) {
+      onError(generationError);
+    }
+  }, [generationError, onError]);
+
   // Form State
-  const [options, setOptions] = useState({
+  const [options, setOptions] = useState<EpubGenerationOptions>({
     generate_toc: true,
     include_imprint: true,
     toc_depth: 3,
+    page_breaks: true,
+    include_cover: true,
     output_format: 'epub' as const,
     embed_metadata: true,
     // Use the cover image URL if available, otherwise use an empty string
@@ -272,9 +364,9 @@ export function EpubGenerationForm({ bookSlug, book: propBook, className }: Epub
             </CardContent>
           </Card>
           <EpubGenerationStatus
-            status={isGenerating ? 'generating' : error ? 'error' : 'idle'}
+            status={isGenerating ? 'generating' : generationError ? 'error' : 'idle'}
             progress={isGenerating ? 50 : 100}
-            error={error?.message || null}
+            error={generationError?.message || null}
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useSession } from 'next-auth/react';
@@ -31,10 +31,10 @@ export function useEpubGeneration({ bookId, onStatusChange }: UseEpubGenerationP
   const { data: session, status: authStatus } = useSession();
   const router = useRouter();
 
-  // Update status and call onStatusChange when status changes
-  const updateStatus = useCallback((newStatus: Partial<GenerationStatus>) => {
+  // Update status function with proper type
+  const updateStatus = useCallback((updates: Partial<GenerationStatus>) => {
     setStatus(prev => {
-      const updated = { ...prev, ...newStatus };
+      const updated = { ...prev, ...updates };
       onStatusChange?.(updated.status);
       return updated;
     });
@@ -52,12 +52,25 @@ export function useEpubGeneration({ bookId, onStatusChange }: UseEpubGenerationP
       return;
     }
 
+    // Get the auth token from localStorage
+    const token = typeof window !== 'undefined' ? localStorage.getItem('bearer_token') : null;
+    if (!token) {
+      updateStatus({
+        status: 'error',
+        progress: 0,
+        message: 'Authentication required',
+        error: 'No authentication token found. Please sign in again.',
+      });
+      return;
+    }
+
     const poll = async () => {
       try {
         const response = await fetch(`/api/books/${bookId}/publish/epub/status?epubId=${epubId}`, {
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.accessToken}`,
+            'Authorization': `Bearer ${token}`,
           },
         });
 
@@ -94,10 +107,10 @@ export function useEpubGeneration({ bookId, onStatusChange }: UseEpubGenerationP
 
     // Start polling
     poll();
-  }, [bookId, session?.accessToken, session?.user?.id, updateStatus]);
+  }, [bookId, session?.user?.id, updateStatus]);
 
   // Generate a new EPUB
-  const generateEpub = useCallback(async (options?: any) => {
+  const generateEpub = useCallback(async (options?: Record<string, unknown>) => {
     if (authStatus === 'loading') {
       return;
     }
@@ -114,11 +127,17 @@ export function useEpubGeneration({ bookId, onStatusChange }: UseEpubGenerationP
     });
 
     try {
+      // Get the auth token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bearer_token') : null;
+      if (!token) {
+        throw new Error('No authentication token found. Please sign in again.');
+      }
+
       const response = await fetch(`/api/books/${bookId}/publish/epub`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.accessToken}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           ...options,
@@ -148,7 +167,7 @@ export function useEpubGeneration({ bookId, onStatusChange }: UseEpubGenerationP
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       });
     }
-  }, [authStatus, bookId, pollGenerationStatus, router, session?.accessToken, updateStatus]);
+  }, [authStatus, bookId, pollGenerationStatus, router, updateStatus]);
 
   // Download the generated EPUB
   const downloadEpub = useCallback(async () => {

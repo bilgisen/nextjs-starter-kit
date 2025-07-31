@@ -12,7 +12,7 @@ import {
 import { Polar } from "@polar-sh/sdk";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
+import { bearer, jwt } from "better-auth/plugins";
 
 // Utility function to safely parse dates
 function safeParseDate(value: string | Date | null | undefined): Date | null {
@@ -29,9 +29,42 @@ const polarClient = new Polar({
 export const auth = betterAuth({
   trustedOrigins: [`${process.env.NEXT_PUBLIC_APP_URL}`],
   allowedDevOrigins: [`${process.env.NEXT_PUBLIC_APP_URL}`],
+  debug: true, // Enable debug mode for detailed error messages
+  session: {
+    // Set token expiration to match cookie expiration
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Update session every 24 hours
+  },
+  plugins: [
+    bearer({
+      // Keep bearer plugin for backward compatibility
+      requireSignature: false,
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    }),
+    jwt({
+      jwks: {
+        keyPairConfig: {
+          alg: "EdDSA",
+          crv: "Ed25519"
+        },
+        disablePrivateKeyEncryption: process.env.NODE_ENV !== 'production' // Only encrypt in production
+      },
+      jwt: {
+        issuer: process.env.NEXT_PUBLIC_APP_URL,
+        audience: process.env.NEXT_PUBLIC_APP_URL,
+        expirationTime: "1h",
+        definePayload: ({ user }) => ({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role
+        })
+      }
+    })
+  ],
   cookieCache: {
     enabled: true,
-    maxAge: 5 * 60, // Cache duration in seconds
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -50,6 +83,7 @@ export const auth = betterAuth({
     },
   },
   plugins: [
+    bearer(),
     polar({
       client: polarClient,
       createCustomerOnSignUp: true,
@@ -189,6 +223,5 @@ export const auth = betterAuth({
         }),
       ],
     }),
-    nextCookies(),
   ],
 });

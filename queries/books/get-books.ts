@@ -4,7 +4,21 @@ export function useGetBooks() {
   return useQuery({
     queryKey: ["books"],
     queryFn: async () => {
-      const res = await fetch("/api/books");
+      // Get the auth token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bearer_token') : null;
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add the Authorization header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch("/api/books", {
+        headers
+      });
       
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -13,6 +27,11 @@ export function useGetBooks() {
           statusText: res.statusText,
           error: errorData
         });
+        
+        // If unauthorized, clear the invalid token
+        if (res.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('bearer_token');
+        }
         
         throw new Error(errorData.error || 'Failed to fetch books');
       }

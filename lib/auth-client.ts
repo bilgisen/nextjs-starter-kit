@@ -15,10 +15,69 @@ const baseURL = process.env.NEXT_PUBLIC_APP_URL ||
 
 console.log('Using baseURL:', baseURL);
 
+// Function to get the auth token from localStorage
+const getAuthToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('bearer_token');
+    console.log('🔑 [getAuthToken] Retrieved token from localStorage:', token ? '[REDACTED]' : 'No token found');
+    return token;
+  }
+  console.log('🌐 [getAuthToken] Running on server, no localStorage available');
+  return null;
+};
+
 export const authClient = createAuthClient({
   baseURL,
+  fetchOptions: {
+    auth: {
+      type: 'Bearer',
+      getToken: () => {
+        const token = getAuthToken();
+        console.log('🔑 [authClient] Using token for request:', token ? '[REDACTED]' : 'No token available');
+        return token || '';
+      }
+    },
+    onSuccess: (ctx) => {
+      try {
+        // Store the token from the response headers
+        const authToken = ctx.response.headers.get('set-auth-token');
+        console.log('🔑 [authClient] Response headers:', {
+          hasAuthHeader: ctx.response.headers.has('set-auth-token'),
+          authHeaderValue: authToken ? '[REDACTED]' : 'No token in headers'
+        });
+        
+        if (authToken && typeof window !== 'undefined') {
+          console.log('💾 [authClient] Storing new auth token in localStorage');
+          localStorage.setItem('bearer_token', authToken);
+          
+          // Also update the token in the auth client
+          authClient.setOptions({
+            fetchOptions: {
+              auth: {
+                type: 'Bearer',
+                token: authToken
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('❌ [authClient] Error in onSuccess handler:', error);
+      }
+    },
+    onError: (error) => {
+      console.error('❌ [authClient] Request error:', error);
+      // If we get a 401, clear the invalid token
+      if (error.response?.status === 401) {
+        console.log('🔒 [authClient] 401 Unauthorized - clearing invalid token');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('bearer_token');
+        }
+      }
+      throw error;
+    }
+  },
   plugins: [
-    organizationClient(), 
+    organizationClient(),
     polarClient()
   ],
 });

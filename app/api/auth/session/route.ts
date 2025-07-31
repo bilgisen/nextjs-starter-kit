@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   try {
     const session = await auth.api.getSession({
-      headers: Object.fromEntries(new Headers(request.headers).entries())
+      headers: request.headers
     });
     
     if (!session) {

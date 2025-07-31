@@ -28,7 +28,7 @@ function SignInContent() {
             Welcome to BookEditor
           </CardTitle>
           <CardDescription className="text-xs md:text-sm">
-            Use your google account to login to your account
+            Use your Google account to login to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -45,30 +45,56 @@ function SignInContent() {
                 disabled={loading}
                 onClick={async () => {
                   try {
-                    await authClient.signIn.social(
+                    console.log('🔑 [SignIn] Starting Google sign-in flow');
+                    setLoading(true);
+                    
+                    // Sign in with Google
+                    const result = await authClient.signIn.social(
                       {
                         provider: "google",
                         callbackURL: returnTo || "/dashboard",
                       },
                       {
                         onRequest: () => {
+                          console.log('🔑 [SignIn] Google sign-in request initiated');
                           setLoading(true);
                         },
-                        onResponse: () => {
+                        onResponse: (response) => {
+                          console.log('✅ [SignIn] Google sign-in response received');
                           setLoading(false);
+                          
+                          // Check for auth token in response headers
+                          const authToken = response.headers?.get('set-auth-token');
+                          if (authToken) {
+                            console.log('🔑 [SignIn] Auth token received in response');
+                            if (typeof window !== 'undefined') {
+                              localStorage.setItem('bearer_token', authToken);
+                              console.log('💾 [SignIn] Auth token stored in localStorage');
+                            }
+                          } else {
+                            console.warn('⚠️ [SignIn] No auth token found in response headers');
+                          }
                         },
                         onError: (ctx) => {
                           setLoading(false);
-                          // Add user-friendly error handling here
-                          console.error("Sign-in failed:", ctx.error);
+                          console.error('❌ [SignIn] Sign-in failed:', ctx.error);
+                          
+                          // Show user-friendly error message
+                          toast.error("Failed to sign in. Please try again.", {
+                            duration: 5000,
+                          });
                         },
-                      },
+                      }
                     );
+                    
+                    console.log('🔑 [SignIn] Google sign-in result:', result);
+                    
                   } catch (error) {
                     setLoading(false);
-                    console.error("Authentication error:", error);
-                    // Consider adding toast notification for user feedback
-                    toast.error("Oops, something went wrong", {
+                    console.error('❌ [SignIn] Authentication error:', error);
+                    
+                    // Show user-friendly error message
+                    toast.error("An unexpected error occurred. Please try again.", {
                       duration: 5000,
                     });
                   }

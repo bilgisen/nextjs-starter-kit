@@ -13,7 +13,7 @@ on:
         type: string
 
 env:
-  NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
+  NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.netlify.app' }}
   NEXT_EPUB_SECRET: ${{ secrets.NEXT_EPUB_SECRET || 'OYh7fJu98ObHM' }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
   NODE_ENV: production

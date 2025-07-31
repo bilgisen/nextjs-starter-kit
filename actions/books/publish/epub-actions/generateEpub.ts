@@ -5,6 +5,68 @@ import { revalidatePath } from 'next/cache';
 import { getSession } from '@/actions/auth/get-session';
 import { PublishOptions, GenerationResponse } from './types';
 import { getApiUrl } from './utils';
+import { getJwtToken, validateToken } from '@/lib/jwt';
+
+interface PayloadType {
+  options: PublishOptions & {
+    output_format: 'epub';
+    theme: string;
+    generate_toc: boolean;
+    include_imprint: boolean;
+    embed_metadata: boolean;
+    cover: boolean;
+  };
+}
+
+/**
+ * Makes an authenticated request to the EPUB generation API
+ */
+async function makeRequest(
+  url: string,
+  payload: PayloadType,
+  headers: Record<string, string>
+): Promise<GenerationResponse> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Request failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      body: errorText
+    });
+    
+    // Try to parse error as JSON
+    try {
+      const errorData = JSON.parse(errorText);
+      if (errorData.error) {
+        throw new Error(errorData.error);
+      }
+      if (errorData.details) {
+        const errors = [];
+        if (errorData.details.options?.output_format?._errors?.[0]) {
+          errors.push(`Output format: ${errorData.details.options.output_format._errors[0]}`);
+        }
+        if (errorData.details._errors?.length) {
+          errors.push(...errorData.details._errors);
+        }
+        if (errors.length) {
+          throw new Error(`Validation error: ${errors.join('; ')}`);
+        }
+      }
+      throw new Error(errorText);
+    } catch {
+      throw new Error(errorText || `Request failed with status ${response.status}`);
+    }
+  }
+
+  return response.json();
+}
 
 /**
  * Generates an EPUB file for the specified book
@@ -17,6 +79,27 @@ export async function generateEpub(
   options: Omit<PublishOptions, 'output_format'>,
   isGitHubAction: boolean = false
 ): Promise<GenerationResponse> {
+  // Convert cover to boolean, handling various input types
+  const coverValue = options.cover;
+  const cover = typeof coverValue === 'string' 
+    ? !['false', '0', ''].includes(coverValue.toLowerCase())
+    : Boolean(coverValue);
+  
+  const payload: PayloadType = {
+    options: {
+      ...options,
+      output_format: 'epub',
+      theme: 'default',
+      generate_toc: options.generate_toc ?? true,
+      include_imprint: options.include_imprint ?? true,
+      embed_metadata: options.embed_metadata ?? true,
+      cover,
+    },
+  };
+
+  console.log('Sending payload to EPUB API:', JSON.stringify(payload, null, 2));
+  const url = getApiUrl(`/api/books/${bookSlug}/publish/epub`);
+  
   // Skip session check for GitHub Actions requests
   if (!isGitHubAction) {
     const session = await getSession();
@@ -24,126 +107,35 @@ export async function generateEpub(
       console.error('EPUB generation failed: User not authenticated');
       throw new Error('Not authenticated');
     }
-  } else {
-    console.log('GitHub Action request - bypassing authentication');
-  }
-
-  const url = getApiUrl(`/api/books/${bookSlug}/publish/epub`);
-  // Structure the payload with required options field
-  // Convert cover to boolean, handling various input types
-  const coverValue = options.cover;
-  const cover = typeof coverValue === 'boolean' 
-    ? coverValue 
-    : typeof coverValue === 'string'
-      ? !['false', '0', ''].includes(coverValue.toLowerCase())
-      : coverValue !== undefined && coverValue !== null && coverValue !== 0;
-  
-  const payload = {
-    options: {
-      ...options,
-      output_format: 'epub' as const,
-      theme: 'default',
-      // Ensure all required options have defaults if not provided
-      generate_toc: options.generate_toc ?? true,
-      include_imprint: options.include_imprint ?? true,
-      embed_metadata: options.embed_metadata ?? true,
-      cover: cover, // Use the converted boolean value
-    },
-  };
-  
-  console.log('Sending payload to EPUB API:', JSON.stringify(payload, null, 2));
-
-  try {
-    if (!process.env.NEXT_EPUB_SECRET) {
-      throw new Error('NEXT_EPUB_SECRET is not configured');
+    
+    // Get a fresh JWT token
+    const token = await getJwtToken();
+    if (!token) {
+      console.error('EPUB generation failed: Failed to get JWT token');
+      throw new Error('Failed to get authentication token');
     }
-
-    const token = process.env.NEXT_EPUB_SECRET.trim();
-    const authHeader = `Bearer ${token}`;
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader
-      },
-      body: JSON.stringify(payload),
-    });
-    
-    console.log('Request headers:', {
+    // Add the token to the request headers
+    const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token.substring(0, 5)}...`
+      'Authorization': `Bearer ${token}`
+    };
+    
+    console.log('🔑 Using token for authentication:', {
+      tokenPrefix: token.substring(0, 5) + '...',
+      tokenLength: token.length
     });
-
-    if (!response.ok) {
-      let errorMessage = `Request failed with status ${response.status}`;
-      try {
-        const errorText = await response.text();
-        console.error('Error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-          body: errorText
-        });
-        
-        // Try to parse as JSON if possible
-        try {
-          const errorData = JSON.parse(errorText);
-          
-          // Handle validation errors
-          if (errorData.details) {
-            // Format validation errors into a readable message
-            const validationErrors: string[] = [];
-            
-            // Check for output_format validation error
-            if (errorData.details.options?.output_format?._errors?.[0]) {
-              validationErrors.push(`Output format: ${errorData.details.options.output_format._errors[0]}`);
-            }
-            
-            // Check for other validation errors
-            if (errorData.details._errors?.length) {
-              validationErrors.push(...errorData.details._errors);
-            }
-            
-            if (validationErrors.length) {
-              errorMessage = `Validation error: ${validationErrors.join('; ')}`;
-            } else if (errorData.error) {
-              errorMessage = errorData.error;
-            }
-          } else if (errorData.error) {
-            errorMessage = errorData.error;
-          } else {
-            errorMessage = errorText;
-          }
-        } catch (error) {
-          // If JSON parsing fails, use the text response
-          console.error('Failed to parse error response:', error);
-          errorMessage = errorText;
-        }
-      } catch (error) {
-        console.error('Error processing error response:', error);
-        errorMessage = `Failed to process error response: ${error instanceof Error ? error.message : String(error)}`;
-      }
-      
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json() as GenerationResponse;
+    
+    // Make the request with the authenticated headers
+    const result = await makeRequest(url, payload, headers);
     
     // Revalidate any relevant paths
     revalidatePath(`/dashboard/books/${bookSlug}/publish`);
     
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to generate EPUB');
-    }
-    
     return result;
-  } catch (error) {
-    console.error('EPUB generation failed:', error);
-    throw new Error(
-      error instanceof Error 
-        ? error.message 
-        : 'Failed to generate EPUB. Please try again.'
-    );
   }
+  
+  console.log('GitHub Action request - bypassing authentication');
+  // For GitHub Actions, make the request without authentication
+  return makeRequest(url, payload, { 'Content-Type': 'application/json' });
 }

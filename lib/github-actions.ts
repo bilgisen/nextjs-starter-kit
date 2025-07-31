@@ -1,7 +1,7 @@
 'server';
 
 import { headers } from 'next/headers';
-import { webcrypto } from 'crypto';
+import { timingSafeEqual } from 'crypto';
 
 /**
  * Checks if the current request is from a GitHub Action
@@ -49,7 +49,7 @@ export async function validateGitHubActionRequest(request: Request): Promise<boo
     }
     
     // Use Node.js built-in timingSafeEqual
-    return webcrypto.timingSafeEqual(tokenBuffer, expectedBuffer);
+    return timingSafeEqual(tokenBuffer, expectedBuffer);
   } catch (error) {
     console.error('Error validating GitHub Action request:', error);
     return false;

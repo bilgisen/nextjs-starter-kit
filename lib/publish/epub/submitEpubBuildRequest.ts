@@ -5,14 +5,28 @@ import { EpubGenerationRequest, EpubGenerationResponse } from '@/types/epub';
  * @param request The EPUB generation request data
  * @returns Promise with the generation response
  */
+// Function to get the auth token from localStorage
+function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('bearer_token');
+  }
+  return null;
+}
+
 export async function submitEpubBuildRequest(
   request: EpubGenerationRequest
 ): Promise<EpubGenerationResponse> {
   try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('No authentication token found. Please sign in again.');
+    }
+
     const response = await fetch(`/api/books/${request.bookSlug}/publish/epub`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(request),
     });
