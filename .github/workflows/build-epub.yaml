@@ -13,23 +13,18 @@ on:
         type: string
 
 env:
-<<<<<<< HEAD
   # Application configuration
-  NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.netlify.app' }}
-=======
   NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.vercel.app' }}
   NEXT_EPUB_SECRET: ${{ secrets.NEXT_EPUB_SECRET || 'OYh7fJu98ObHM' }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
->>>>>>> d9005243156b2425d7b8fa64e481d170453c12b5
   NODE_ENV: production
   
   # JWT configuration
-  JWT_ISSUER: ${{ vars.JWT_ISSUER || vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.netlify.app' }}
+  JWT_ISSUER: ${{ vars.JWT_ISSUER || vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.vercel.app' }}
   JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE || 'workflow' }}
   
   # Secrets - these should be set in GitHub repository secrets
   JWT_SECRET: ${{ secrets.JWT_SECRET }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
   WORKFLOW_USER_ID: ${{ secrets.WORKFLOW_USER_ID || 'github-action' }}
 
 jobs:
