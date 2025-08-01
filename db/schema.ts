@@ -8,6 +8,9 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { jwks } from "./schema/jwks";
+
+export { jwks };
 
 //
 // ─── AUTHENTICATION & USER MANAGEMENT ─────────────────────────────
@@ -25,6 +28,12 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 
+export const userRelations = relations(user, ({ many }) => ({
+  sessions: many(session),
+  accounts: many(account),
+  subscriptions: many(subscription),
+}));
+
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expiresAt").notNull(),
@@ -35,6 +44,13 @@ export const session = pgTable("session", {
   userAgent: text("userAgent"),
   userId: text("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
 });
+
+export const sessionRelations = relations(session, ({ one }) => ({
+  user: one(user, {
+    fields: [session.userId],
+    references: [user.id],
+  }),
+}));
 
 export const account = pgTable("account", {
   id: text("id").primaryKey(),

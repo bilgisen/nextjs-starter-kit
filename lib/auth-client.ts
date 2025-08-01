@@ -32,9 +32,14 @@ export const authClient = createAuthClient({
     auth: {
       type: 'Bearer',
       getToken: () => {
-        const token = getAuthToken();
-        console.log('🔑 [authClient] Using token for request:', token ? '[REDACTED]' : 'No token available');
-        return token || '';
+        try {
+          const token = getAuthToken();
+          console.log('🔑 [authClient] Using token for request:', token ? '[REDACTED]' : 'No token available');
+          return token || '';
+        } catch (error) {
+          console.error('❌ [authClient] Error getting auth token:', error);
+          return '';
+        }
       }
     },
     onSuccess: (ctx) => {
@@ -65,15 +70,27 @@ export const authClient = createAuthClient({
       }
     },
     onError: (error) => {
-      console.error('❌ [authClient] Request error:', error);
+      console.error('❌ [authClient] Request error:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers ? Object.keys(error.config.headers) : 'No headers'
+      });
+      
       // If we get a 401, clear the invalid token
       if (error.response?.status === 401) {
         console.log('🔒 [authClient] 401 Unauthorized - clearing invalid token');
         if (typeof window !== 'undefined') {
           localStorage.removeItem('bearer_token');
+          // Force a page reload to reset auth state
+          window.location.href = '/';
         }
       }
-      throw error;
+      
+      // Don't throw the error to prevent unhandled promise rejections
+      return Promise.reject(error);
     }
   },
   plugins: [

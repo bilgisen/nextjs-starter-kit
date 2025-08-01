@@ -13,10 +13,18 @@ on:
         type: string
 
 env:
+  # Application configuration
   NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.netlify.app' }}
-  NEXT_EPUB_SECRET: ${{ secrets.NEXT_EPUB_SECRET || 'OYh7fJu98ObHM' }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
   NODE_ENV: production
+  
+  # JWT configuration
+  JWT_ISSUER: ${{ vars.JWT_ISSUER || vars.NEXT_PUBLIC_APP_URL || 'https://bookedit.netlify.app' }}
+  JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE || 'workflow' }}
+  
+  # Secrets - these should be set in GitHub repository secrets
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  WORKFLOW_USER_ID: ${{ secrets.WORKFLOW_USER_ID || 'github-action' }}
 
 jobs:
   build-epub:
@@ -48,12 +56,69 @@ jobs:
             wget \
             parallel
 
-      - name: Fetch Book Payload
-        id: fetch-payload
+      - name: Generate JWT Token
+        id: generate-token
         env:
           BOOK_SLUG: ${{ github.event.inputs.book_slug }}
           TIMESTAMP: ${{ github.event.inputs.timestamp }}
+          WORKFLOW_ID: ${{ github.run_id }}
+        run: |
+          # Install required tools
+          echo "Installing jq and jose-cli..."
+          sudo apt-get update
+          sudo apt-get install -y jq
+          npm install -g @panva/jose-cli
+          
+          # Generate JWT token
+          echo "Generating JWT token..."
+          NOW=$(date +%s)
+          EXPIRY=$((NOW + 3600)) # 1 hour from now
+          
+          JWT_PAYLOAD=$(jq -n \
+            --arg sub "$WORKFLOW_USER_ID" \
+            --arg iat "$NOW" \
+            --arg exp "$EXPIRY" \
+            --arg iss "$JWT_ISSUER" \
+            --arg aud "$JWT_AUDIENCE" \
+            --arg workflowId "$WORKFLOW_ID" \
+            --arg bookSlug "$BOOK_SLUG" \
+            '{
+              sub: $sub,
+              iat: ($iat | tonumber),
+              exp: ($exp | tonumber),
+              iss: $iss,
+              aud: $aud,
+              workflowId: $workflowId,
+              bookSlug: $bookSlug
+            }')
+          
+          # Sign the token with HS256
+          JWT_TOKEN=$(jose jwt sign \
+            --secret "$JWT_SECRET" \
+            --alg HS256 \
+            --iss "$JWT_ISSUER" \
+            --aud "$JWT_AUDIENCE" \
+            --sub "$WORKFLOW_USER_ID" \
+            --exp "$EXPIRY" \
+            -- "$JWT_PAYLOAD")
+          
+          echo "JWT_TOKEN=$JWT_TOKEN" >> $GITHUB_ENV
+          echo "JWT_HEADER=Bearer $JWT_TOKEN" >> $GITHUB_ENV
+          echo "Generated JWT token"
+      
+      - name: Fetch Book Payload
+        id: fetch-payload
+        env:
+          # Inputs from workflow_dispatch
+          BOOK_SLUG: ${{ github.event.inputs.book_slug }}
+          TIMESTAMP: ${{ github.event.inputs.timestamp }}
+          
+          # Environment variables
           BASE_URL: ${{ env.NEXT_PUBLIC_APP_URL }}
+          JWT_ISSUER: ${{ env.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ env.JWT_AUDIENCE }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          WORKFLOW_USER_ID: ${{ secrets.WORKFLOW_USER_ID || 'github-action' }}
         run: |
           echo "Fetching book payload for $BOOK_SLUG"
           mkdir -p ./book-content/chapters
@@ -64,8 +129,7 @@ jobs:
           
           if ! curl -s -f -o ./book-content/payload.json \
                     -H "Accept: application/json" \
-                    -H "X-GitHub-Event: workflow_dispatch" \
-                    -H "X-Hub-Signature-256: $NEXT_EPUB_SECRET" \
+                    -H "Authorization: $JWT_HEADER" \
                     "$PAYLOAD_URL?t=$TIMESTAMP"; then
             echo "::error::Failed to download book payload"
             exit 1
@@ -153,7 +217,7 @@ jobs:
 
       - name: Generate EPUB with Pandoc
         run: |
-          echo "Generating EPUB for ${{ github.event.inputs.slug }}"
+          echo "Generating EPUB for $BOOK_SLUG"
           mkdir -p ./output
           
           # Get options from payload
@@ -202,6 +266,9 @@ jobs:
           TITLE=$(jq -r '.book.title // "Untitled Book"' ./book-content/payload.json)
           AUTHOR=$(jq -r '.book.author // "Unknown Author"' ./book-content/payload.json)
           LANGUAGE=$(jq -r '.book.language // "en"' ./book-content/payload.json)
+          
+          # Get book slug from environment variable
+          BOOK_SLUG="${{ github.event.inputs.book_slug }}"
           
           # Generate EPUB using Pandoc
           echo "Running Pandoc with ${#FILES[@]} files"

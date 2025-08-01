@@ -42,22 +42,41 @@ export const auth = betterAuth({
       maxAge: 30 * 24 * 60 * 60, // 30 days
     }),
     jwt({
+      // Enable the set-auth-jwt header in the session response
+      setAuthJwtHeader: true,
+      
       jwks: {
         keyPairConfig: {
           alg: "EdDSA",
           crv: "Ed25519"
         },
-        disablePrivateKeyEncryption: process.env.NODE_ENV !== 'production' // Only encrypt in production
+        // Only encrypt private keys in production
+        disablePrivateKeyEncryption: process.env.NODE_ENV !== 'production',
+        // Enable rotation for better security
+        rotation: {
+          enabled: true,
+          interval: '7d',  // Rotate keys every 7 days
+          deleteExpiredAfter: '14d'  // Keep expired keys for 14 days
+        }
       },
+      
       jwt: {
-        issuer: process.env.NEXT_PUBLIC_APP_URL,
-        audience: process.env.NEXT_PUBLIC_APP_URL,
+        // Set the issuer to your application's URL
+        issuer: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        // Set the audience to your application's URL
+        audience: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        // Set token expiration time
         expirationTime: "1h",
-        definePayload: ({ user }) => ({
-          id: user.id,
+        // Define the JWT payload
+        definePayload: ({ user, session }) => ({
+          // Standard claims
+          sub: user.id,
           email: user.email,
           name: user.name,
-          role: user.role
+          // Custom claims
+          role: user.role,
+          // Include session ID for invalidation
+          sid: session?.id
         })
       }
     })
